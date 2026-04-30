@@ -9,6 +9,7 @@ import { Link } from 'expo-router';
 import { FlatList, Text, View } from 'react-native';
 import { TutorCard } from '../../src/components/TutorCard';
 import { router } from 'expo-router';
+import { mockTutors } from '../../src/data/mockTutors';
 
 
 
@@ -26,7 +27,7 @@ export default function HomeScreen() {
       </Text>
 
       <FlatList
-        data={tutors}
+        data={mockTutors}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
           <TutorCard
