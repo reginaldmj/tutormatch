@@ -1,9 +1,34 @@
-import { Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
+import { mockConversations } from '../../src/data/mockMessages';
 
-export default function BookingsScreen() {
+export default function MessagesScreen() {
   return (
-    <View>
-      <Text>Messages</Text>
+    <View style={{ flex: 1, padding: 20 }}>
+      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
+        Messages
+      </Text>
+
+      <FlatList
+        data={mockConversations}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <View
+            style={{
+              padding: 16,
+              borderWidth: 1,
+              borderColor: '#ddd',
+              borderRadius: 12,
+              marginBottom: 12,
+            }}
+          >
+            <Text style={{ fontSize: 18, fontWeight: '600' }}>
+              {item.tutorName}
+            </Text>
+            <Text style={{ marginTop: 4 }}>{item.lastMessage}</Text>
+            <Text style={{ marginTop: 6, color: '#666' }}>{item.updatedAt}</Text>
+          </View>
+        )}
+      />
     </View>
   );
 }
