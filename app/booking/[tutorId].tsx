@@ -1,8 +1,38 @@
 import { useLocalSearchParams } from 'expo-router';
-import { Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+import { mockTutors } from '../../src/data/mockTutors';
+
+const times = ['9:00 AM', '11:00 AM', '2:00 PM', '4:00 PM'];
 
 export default function BookingScreen() {
   const { tutorId } = useLocalSearchParams();
+  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [confirmed, setConfirmed] = useState(false);
+
+  const tutor = mockTutors.find((tutor) => tutor.id === tutorId);
+
+  if (!tutor) {
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text>Tutor not found.</Text>
+      </View>
+    );
+  }
+
+  if (confirmed) {
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text style={{ fontSize: 28, fontWeight: '700' }}>
+          Booking Confirmed
+        </Text>
+
+        <Text style={{ marginTop: 16 }}>
+          You booked {tutor.name} at {selectedTime}.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
@@ -10,9 +40,48 @@ export default function BookingScreen() {
         Book Session
       </Text>
 
-      <Text style={{ marginTop: 12 }}>
-        Booking tutor ID: {tutorId}
+      <Text style={{ marginTop: 12, fontSize: 18 }}>
+        {tutor.name}
       </Text>
+
+      <Text style={{ marginTop: 4 }}>
+        {tutor.subject}
+      </Text>
+
+      <Text style={{ marginTop: 20, fontWeight: '600' }}>
+        Choose a time
+      </Text>
+
+      {times.map((time) => (
+        <Pressable
+          key={time}
+          onPress={() => setSelectedTime(time)}
+          style={{
+            padding: 14,
+            borderWidth: 1,
+            borderColor: selectedTime === time ? 'black' : '#ddd',
+            borderRadius: 10,
+            marginTop: 10,
+          }}
+        >
+          <Text>{time}</Text>
+        </Pressable>
+      ))}
+
+      <Pressable
+        disabled={!selectedTime}
+        onPress={() => setConfirmed(true)}
+        style={{
+          marginTop: 24,
+          backgroundColor: selectedTime ? 'black' : '#ccc',
+          padding: 14,
+          borderRadius: 10,
+        }}
+      >
+        <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
+          Confirm Booking
+        </Text>
+      </Pressable>
     </View>
   );
 }
