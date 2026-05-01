@@ -21,6 +21,7 @@ export default function RootLayout() {
           <Stack.Screen name="tutor/[id]" options={{ title: 'Tutor Profile' }} />
           <Stack.Screen name="booking/[tutorId]" options={{ title: 'Book Session' }} />
           <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen name="chat/[id]" options={{ title: 'Chat' }} />
         </Stack>
         <StatusBar style="auto" />
       </BookingProvider>

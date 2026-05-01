@@ -1,4 +1,5 @@
-import { FlatList, Text, View } from 'react-native';
+import { router } from 'expo-router';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { mockConversations } from '../../src/data/mockMessages';
 
 export default function MessagesScreen() {
@@ -12,7 +13,8 @@ export default function MessagesScreen() {
         data={mockConversations}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <View
+          <Pressable
+            onPress={() => router.push(`/chat/${item.id}` as any)}
             style={{
               padding: 16,
               borderWidth: 1,
@@ -25,8 +27,10 @@ export default function MessagesScreen() {
               {item.tutorName}
             </Text>
             <Text style={{ marginTop: 4 }}>{item.lastMessage}</Text>
-            <Text style={{ marginTop: 6, color: '#666' }}>{item.updatedAt}</Text>
-          </View>
+            <Text style={{ marginTop: 6, color: '#666' }}>
+              {item.updatedAt}
+            </Text>
+          </Pressable>
         )}
       />
     </View>
