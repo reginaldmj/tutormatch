@@ -1,7 +1,8 @@
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { mockTutors } from '../../src/data/mockTutors';
+import { useBookings } from '../../src/context/BookingContext';
 
 const times = ['9:00 AM', '11:00 AM', '2:00 PM', '4:00 PM'];
 
@@ -11,7 +12,8 @@ export default function BookingScreen() {
   const [confirmed, setConfirmed] = useState(false);
 
   const tutor = mockTutors.find((tutor) => tutor.id === tutorId);
-
+  const { addBooking } = useBookings();
+  
   if (!tutor) {
     return (
       <View style={{ flex: 1, padding: 20 }}>
@@ -21,18 +23,32 @@ export default function BookingScreen() {
   }
 
   if (confirmed) {
-    return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text style={{ fontSize: 28, fontWeight: '700' }}>
-          Booking Confirmed
-        </Text>
+  return (
+    <View style={{ flex: 1, padding: 20 }}>
+      <Text style={{ fontSize: 28, fontWeight: '700' }}>
+        Booking Confirmed
+      </Text>
 
-        <Text style={{ marginTop: 16 }}>
-          You booked {tutor.name} at {selectedTime}.
+      <Text style={{ marginTop: 16 }}>
+        You booked {tutor.name} at {selectedTime}.
+      </Text>
+
+      <Pressable
+        onPress={() => router.push('/(tabs)/bookings' as any)}
+        style={{
+          marginTop: 24,
+          backgroundColor: 'black',
+          padding: 14,
+          borderRadius: 10,
+        }}
+      >
+        <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
+          View My Bookings
         </Text>
-      </View>
-    );
-  }
+      </Pressable>
+    </View>
+  );
+}
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
@@ -70,7 +86,19 @@ export default function BookingScreen() {
 
       <Pressable
         disabled={!selectedTime}
-        onPress={() => setConfirmed(true)}
+        onPress={() => {
+          if (!selectedTime) return;
+            
+          addBooking({
+            id: Date.now().toString(),
+            tutorId: tutor.id,
+            tutorName: tutor.name,
+            subject: tutor.subject,
+            time: selectedTime,
+            status: 'confirmed',
+            });
+            setConfirmed(true);
+        }}
         style={{
           marginTop: 24,
           backgroundColor: selectedTime ? 'black' : '#ccc',
@@ -78,10 +106,27 @@ export default function BookingScreen() {
           borderRadius: 10,
         }}
       >
+      
         <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
           Confirm Booking
         </Text>
       </Pressable>
+      
+      <Pressable
+        onPress={() => router.push('/(tabs)/bookings' as any)}
+        style={{
+          marginTop: 24,
+          backgroundColor: 'black',
+          padding: 14,
+          borderRadius: 10,
+        }}
+      >
+        <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
+          View My Bookings
+        </Text>
+      </Pressable>
+
+
     </View>
   );
 }
