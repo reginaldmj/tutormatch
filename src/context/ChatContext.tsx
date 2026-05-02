@@ -5,6 +5,7 @@ import { ChatMessage } from '../types/chat';
 type ChatContextType = {
   messagesByConversation: Record<string, ChatMessage[]>;
   addMessage: (conversationId: string, message: ChatMessage) => void;
+  getLastMessage: (conversationId: string) => ChatMessage | undefined;
 };
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
@@ -21,8 +22,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }));
   }
 
+  function getLastMessage(conversationId: string) {
+    const messages = messagesByConversation[conversationId] ?? [];
+    return messages[messages.length - 1];
+  }
+
   return (
-    <ChatContext.Provider value={{ messagesByConversation, addMessage }}>
+    <ChatContext.Provider
+      value={{ messagesByConversation, addMessage, getLastMessage }}
+    >
       {children}
     </ChatContext.Provider>
   );
