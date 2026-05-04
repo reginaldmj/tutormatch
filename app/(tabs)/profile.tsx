@@ -1,5 +1,6 @@
+import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
 
 export default function ProfileScreen() {
@@ -30,6 +31,11 @@ export default function ProfileScreen() {
     }
   }
 
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.replace('/auth/login' as any);
+  }
+
   if (!profile) {
     return (
       <View style={{ flex: 1, padding: 20 }}>
@@ -46,24 +52,55 @@ export default function ProfileScreen() {
 
       <View
         style={{
-          padding: 16,
+          padding: 20,
           borderWidth: 1,
           borderColor: '#ddd',
-          borderRadius: 12,
+          borderRadius: 16,
+          backgroundColor: '#fafafa',
         }}
       >
-        <Text style={{ fontSize: 20, fontWeight: '600' }}>
+        <Text style={{ fontSize: 22, fontWeight: '700' }}>
           {profile.full_name}
         </Text>
 
-        <Text style={{ marginTop: 6 }}>
-          Role: {profile.role}
+        <Text style={{ marginTop: 6, color: '#666' }}>
+          {profile.role === 'student' ? 'Student' : 'Tutor'}
         </Text>
 
-        <Text style={{ marginTop: 6 }}>
-          User ID: {profile.id}
-        </Text>
+        <View
+          style={{
+            height: 1,
+            backgroundColor: '#eee',
+            marginVertical: 16,
+          }}
+        />
+
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+          <View>
+            <Text style={{ fontSize: 18, fontWeight: '600' }}>0</Text>
+            <Text style={{ color: '#666' }}>Bookings</Text>
+          </View>
+
+          <View>
+            <Text style={{ fontSize: 18, fontWeight: '600' }}>0</Text>
+            <Text style={{ color: '#666' }}>Chats</Text>
+          </View>
+        </View>
       </View>
+
+      <Pressable
+        onPress={handleLogout}
+        style={{
+          marginTop: 24,
+          backgroundColor: 'black',
+          padding: 14,
+          borderRadius: 12,
+        }}
+      >
+        <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
+          Log Out
+        </Text>
+      </Pressable>
     </View>
   );
 }
