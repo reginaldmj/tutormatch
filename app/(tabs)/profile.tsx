@@ -1,13 +1,42 @@
+import { useEffect, useState } from 'react';
 import { Text, View } from 'react-native';
-import { useBookings } from '../../src/context/BookingContext';
+import { supabase } from '../../src/lib/supabase';
 
 export default function ProfileScreen() {
-  const { bookings } = useBookings();
+  const [profile, setProfile] = useState<any>(null);
 
-  const uniqueTutors = bookings.filter(
-    (booking, index, self) =>
-      index === self.findIndex((item) => item.tutorId === booking.tutorId),
-  );
+  useEffect(() => {
+    loadProfile();
+  }, []);
+
+  async function loadProfile() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+
+    console.log('PROFILE DATA:', data);
+    console.log('PROFILE ERROR:', error);
+
+    if (data) {
+      setProfile(data);
+    }
+  }
+
+  if (!profile) {
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text>Loading profile...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
@@ -23,13 +52,16 @@ export default function ProfileScreen() {
           borderRadius: 12,
         }}
       >
-        <Text style={{ fontSize: 20, fontWeight: '600' }}>RJ Student</Text>
-        <Text style={{ marginTop: 6 }}>Role: Student</Text>
-        <Text style={{ marginTop: 6 }}>
-          Sessions booked: {bookings.length}
+        <Text style={{ fontSize: 20, fontWeight: '600' }}>
+          {profile.full_name}
         </Text>
+
         <Text style={{ marginTop: 6 }}>
-          Conversations: {uniqueTutors.length}
+          Role: {profile.role}
+        </Text>
+
+        <Text style={{ marginTop: 6 }}>
+          User ID: {profile.id}
         </Text>
       </View>
     </View>
