@@ -90,7 +90,6 @@ export default function BookingScreen() {
           if (!selectedTime) return;
             
           addBooking({
-            id: Date.now().toString(),
             tutorId: tutor.id,
             tutorName: tutor.name,
             subject: tutor.subject,
