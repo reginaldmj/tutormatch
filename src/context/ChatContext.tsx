@@ -1,4 +1,5 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { mockChatMessagesByConversation } from '../data/mockChatMessages';
 import { ChatMessage } from '../types/chat';
 
@@ -8,17 +9,61 @@ type ChatContextType = {
   getLastMessage: (conversationId: string) => ChatMessage | undefined;
 };
 
+const STORAGE_KEY = 'chat_messages';
+
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const [messagesByConversation, setMessagesByConversation] = useState<
     Record<string, ChatMessage[]>
-  >(mockChatMessagesByConversation);
+  >({});
+
+  // 🔹 Load messages from storage on app start
+  useEffect(() => {
+    async function loadMessages() {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+
+        if (stored) {
+          setMessagesByConversation(JSON.parse(stored));
+        } else {
+          setMessagesByConversation(mockChatMessagesByConversation);
+        }
+      } catch (error) {
+        console.log('Error loading messages:', error);
+        setMessagesByConversation(mockChatMessagesByConversation);
+      }
+    }
+
+    loadMessages();
+  }, []);
+
+  // 🔹 Save messages whenever they change
+  useEffect(() => {
+    async function saveMessages() {
+      try {
+        await AsyncStorage.setItem(
+          STORAGE_KEY,
+          JSON.stringify(messagesByConversation),
+        );
+      } catch (error) {
+        console.log('Error saving messages:', error);
+      }
+    }
+
+    // avoid saving empty initial state before load
+    if (Object.keys(messagesByConversation).length > 0) {
+      saveMessages();
+    }
+  }, [messagesByConversation]);
 
   function addMessage(conversationId: string, message: ChatMessage) {
     setMessagesByConversation((currentMessages) => ({
       ...currentMessages,
-      [conversationId]: [...(currentMessages[conversationId] ?? []), message],
+      [conversationId]: [
+        ...(currentMessages[conversationId] ?? []),
+        message,
+      ],
     }));
   }
 
