@@ -7,6 +7,7 @@ type BookingContextType = {
   loading: boolean;
   loadBookings: () => Promise<void>;
   addBooking: (booking: Omit<Booking, 'id'>) => Promise<void>;
+  cancelBooking: (bookingId: string) => Promise<void>;
 };
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
@@ -95,9 +96,40 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     }
   }
 
+  async function cancelBooking(bookingId: string) {
+    const { data, error } = await supabase
+      .from('bookings')
+      .update({ status: 'cancelled' })
+      .eq('id', bookingId)
+      .select()
+      .single();
+
+    console.log('CANCEL BOOKING DATA:', data);
+    console.log('CANCEL BOOKING ERROR:', error);
+
+    if (!error && data) {
+      setBookings((currentBookings) =>
+        currentBookings.map((booking) =>
+          booking.id === bookingId
+            ? {
+                ...booking,
+                status: 'cancelled',
+              }
+            : booking,
+        ),
+      );
+    }
+  }
+
   return (
     <BookingContext.Provider
-      value={{ bookings, loading, loadBookings, addBooking }}
+      value={{
+        bookings,
+        loading,
+        loadBookings,
+        addBooking,
+        cancelBooking,
+      }}
     >
       {children}
     </BookingContext.Provider>

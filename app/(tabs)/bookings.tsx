@@ -1,8 +1,8 @@
-import { FlatList, Text, View } from 'react-native';
+import { FlatList, Pressable, Text, View } from 'react-native';
 import { useBookings } from '../../src/context/BookingContext';
 
 export default function BookingsScreen() {
-  const { bookings, loading } = useBookings();
+  const { bookings, loading, cancelBooking } = useBookings();
 
   if (loading) {
     return (
@@ -37,9 +37,26 @@ export default function BookingsScreen() {
               <Text style={{ fontSize: 18, fontWeight: '600' }}>
                 {item.tutorName}
               </Text>
+
               <Text>{item.subject}</Text>
               <Text>{item.time}</Text>
               <Text>Status: {item.status}</Text>
+
+              {item.status !== 'cancelled' && (
+                <Pressable
+                  onPress={() => cancelBooking(item.id)}
+                  style={{
+                    marginTop: 12,
+                    backgroundColor: '#eee',
+                    padding: 12,
+                    borderRadius: 10,
+                  }}
+                >
+                  <Text style={{ textAlign: 'center', fontWeight: '600' }}>
+                    Cancel Booking
+                  </Text>
+                </Pressable>
+              )}
             </View>
           )}
         />
