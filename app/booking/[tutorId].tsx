@@ -1,8 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useBookings } from '../../src/context/BookingContext';
-import { mockTutors } from '../../src/data/mockTutors';
+import { getTutorById } from '../../src/services/tutors';
 
 const times = ['9:00 AM', '11:00 AM', '2:00 PM', '4:00 PM'];
 
@@ -12,10 +12,27 @@ export default function BookingScreen() {
 
   const { addBooking } = useBookings();
 
+  const [tutor, setTutor] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
 
-  const tutor = mockTutors.find((tutor) => tutor.id === id);
+  useEffect(() => {
+    async function loadTutor() {
+      if (!id) return;
+
+      try {
+        const data = await getTutorById(id);
+        setTutor(data);
+      } catch (error) {
+        console.log('LOAD BOOKING TUTOR ERROR:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTutor();
+  }, [id]);
 
   async function handleConfirmBooking() {
     if (!tutor || !selectedTime) return;
@@ -29,6 +46,14 @@ export default function BookingScreen() {
     });
 
     setConfirmed(true);
+  }
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text>Loading booking...</Text>
+      </View>
+    );
   }
 
   if (!tutor) {

@@ -1,11 +1,39 @@
-import { useLocalSearchParams, router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { mockTutors } from '../../src/data/mockTutors';
+import { getTutorById } from '../../src/services/tutors';
 
 export default function TutorProfileScreen() {
   const { id } = useLocalSearchParams();
+  const tutorId = Array.isArray(id) ? id[0] : id;
 
-  const tutor = mockTutors.find((tutor) => tutor.id === id);
+  const [tutor, setTutor] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTutor() {
+      if (!tutorId) return;
+
+      try {
+        const data = await getTutorById(tutorId);
+        setTutor(data);
+      } catch (error) {
+        console.log('LOAD TUTOR ERROR:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTutor();
+  }, [tutorId]);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text>Loading tutor...</Text>
+      </View>
+    );
+  }
 
   if (!tutor) {
     return (
@@ -26,14 +54,14 @@ export default function TutorProfileScreen() {
       </Text>
 
       <Text style={{ marginTop: 8 }}>
-        ${tutor.price}/hr
+        ${tutor.price}/hour
       </Text>
 
       <Text style={{ marginTop: 8 }}>
         ⭐ {tutor.rating}
       </Text>
 
-      <Text style={{ marginTop: 16, lineHeight: 22 }}>
+      <Text style={{ marginTop: 16 }}>
         {tutor.bio}
       </Text>
 

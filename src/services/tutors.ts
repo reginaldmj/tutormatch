@@ -15,3 +15,20 @@ export async function getTutors() {
 
   return data;
 }
+
+export async function getTutorById(id: string) {
+  const { data, error } = await supabase
+    .from('tutors')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  console.log('TUTOR DATA:', data);
+  console.log('TUTOR ERROR:', error);
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+}
