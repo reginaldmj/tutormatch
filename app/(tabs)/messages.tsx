@@ -1,11 +1,20 @@
 import { router } from 'expo-router';
+import { useEffect } from 'react';
 import { FlatList, Pressable, Text, View } from 'react-native';
 import { useBookings } from '../../src/context/BookingContext';
 import { useChat } from '../../src/context/ChatContext';
 
 export default function MessagesScreen() {
   const { bookings } = useBookings();
-  const { messagesByConversation, getLastMessage } = useChat();
+  const {
+    messagesByConversation,
+    getLastMessage,
+    loadAllMessages,
+  } = useChat();
+
+  useEffect(() => {
+    loadAllMessages();
+  }, []);
 
   const uniqueBookings = bookings.filter(
     (booking, index, self) =>
