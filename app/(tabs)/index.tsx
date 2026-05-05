@@ -1,44 +1,59 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
-
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { TutorCard } from '../../src/components/TutorCard';
-import { router } from 'expo-router';
-import { mockTutors } from '../../src/data/mockTutors';
-
-
-
-const tutors = [
-  { id: '1', name: 'John Doe', subject: 'Math', price: 50, rating: 4.5 },
-  { id: '2', name: 'Jane Smith', subject: 'Science', price: 60, rating: 4.8 },
-  { id: '3', name: 'Bob Johnson', subject: 'History', price: 45, rating: 4.2 },
-];
+import { getTutors } from '../../src/services/tutors';
 
 export default function HomeScreen() {
+  const [tutors, setTutors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTutors() {
+      try {
+        const data = await getTutors();
+        setTutors(data ?? []);
+      } catch (error) {
+        console.log('LOAD TUTORS ERROR:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTutors();
+  }, []);
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text>Loading tutors...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, padding: 20 }}>
       <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
         Find a Tutor
       </Text>
 
-      <FlatList
-        data={mockTutors}
-        keyExtractor={(item) => item.id}
-        renderItem={({ item }) => (
-          <TutorCard
-            name={item.name}
-            subject={item.subject}
-            price={item.price}
-            rating={item.rating}
-            onPress={() => router.push(`/tutor/${item.id}`)}
-          />
-        )}
-      />
+      {tutors.length === 0 ? (
+        <Text>No tutors found.</Text>
+      ) : (
+        <FlatList
+          data={tutors}
+          keyExtractor={(item) => item.id}
+          renderItem={({ item }) => (
+            <TutorCard
+              name={item.name}
+              subject={item.subject}
+              price={item.price}
+              rating={item.rating}
+              onPress={() => router.push(`/tutor/${item.id}` as any)}
+            />
+          )}
+        />
+      )}
     </View>
   );
 }

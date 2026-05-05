@@ -1,10 +1,17 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useBookings } from '../../src/context/BookingContext';
 import { supabase } from '../../src/lib/supabase';
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<any>(null);
+  const { bookings } = useBookings();
+
+  const uniqueTutors = bookings.filter(
+    (booking, index, self) =>
+      index === self.findIndex((item) => item.tutorId === booking.tutorId),
+  );
 
   useEffect(() => {
     loadProfile();
@@ -77,12 +84,16 @@ export default function ProfileScreen() {
 
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <View>
-            <Text style={{ fontSize: 18, fontWeight: '600' }}>0</Text>
+            <Text style={{ fontSize: 18, fontWeight: '600' }}>
+              {bookings.length}
+            </Text>
             <Text style={{ color: '#666' }}>Bookings</Text>
           </View>
 
           <View>
-            <Text style={{ fontSize: 18, fontWeight: '600' }}>0</Text>
+            <Text style={{ fontSize: 18, fontWeight: '600' }}>
+              {uniqueTutors.length}
+            </Text>
             <Text style={{ color: '#666' }}>Chats</Text>
           </View>
         </View>

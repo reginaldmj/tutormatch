@@ -2,12 +2,22 @@ import { FlatList, Text, View } from 'react-native';
 import { useBookings } from '../../src/context/BookingContext';
 
 export default function BookingsScreen() {
-  const { bookings } = useBookings();
+  const { bookings, loading } = useBookings();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text>Loading bookings...</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, padding: 20 }}>
       <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
         My Bookings
       </Text>
+
       {bookings.length === 0 ? (
         <Text>No bookings yet.</Text>
       ) : (
