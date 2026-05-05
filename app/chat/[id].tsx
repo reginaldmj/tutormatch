@@ -1,47 +1,45 @@
-import { useLocalSearchParams } from "expo-router";
-import { useState } from "react";
-import { FlatList, Pressable, Text, TextInput, View } from "react-native";
-import { useChat } from "../../src/context/ChatContext";
-import { mockConversations } from "../../src/data/mockMessages";
+import { useLocalSearchParams } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
+import { useChat } from '../../src/context/ChatContext';
+import { useBookings } from '../../src/context/BookingContext';
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams();
-  const conversationId = Array.isArray(id) ? id[0] : id;
+  const tutorId = Array.isArray(id) ? id[0] : id;
 
-  const conversation = mockConversations.find(
-    (conversation) => conversation.id === conversationId,
-  );
+  const { bookings } = useBookings();
+  const { messagesByConversation, loadMessages, addMessage } = useChat();
 
-  const { messagesByConversation, addMessage } = useChat();
+  const [messageText, setMessageText] = useState('');
 
-  const messages =
-    conversationId && messagesByConversation
-      ? (messagesByConversation[conversationId] ?? [])
-      : [];
+  const booking = bookings.find((booking) => booking.tutorId === tutorId);
+  const tutorName = booking?.tutorName ?? 'Tutor';
 
-  const [messageText, setMessageText] = useState("");
+  const messages = tutorId ? messagesByConversation[tutorId] ?? [] : [];
 
-  function sendMessage() {
-    if (!conversationId) return;
+  useEffect(() => {
+    if (tutorId) {
+      loadMessages(tutorId);
+    }
+  }, [tutorId]);
+
+  async function sendMessage() {
+    if (!tutorId) return;
     if (!messageText.trim()) return;
 
-    addMessage(conversationId, {
-      id: Date.now().toString(),
-      sender: "student",
-      text: messageText,
-      time: "Now",
-    });
+    await addMessage(tutorId, tutorName, messageText.trim());
 
-    setMessageText("");
+    setMessageText('');
   }
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Text style={{ fontSize: 28, fontWeight: "700", marginBottom: 4 }}>
-        {conversation?.tutorName ?? "Chat"}
+      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 4 }}>
+        {tutorName}
       </Text>
 
-      <Text style={{ marginBottom: 16, color: "#666" }}>
+      <Text style={{ marginBottom: 16, color: '#666' }}>
         Tutor conversation
       </Text>
 
@@ -50,20 +48,20 @@ export default function ChatScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={{ paddingBottom: 20 }}
         renderItem={({ item }) => {
-          const isStudent = item.sender === "student";
+          const isStudent = item.sender === 'student';
 
           return (
             <View
               style={{
-                alignSelf: isStudent ? "flex-end" : "flex-start",
-                backgroundColor: isStudent ? "#111" : "#eee",
+                alignSelf: isStudent ? 'flex-end' : 'flex-start',
+                backgroundColor: isStudent ? '#111' : '#eee',
                 padding: 12,
                 borderRadius: 12,
                 marginBottom: 10,
-                maxWidth: "80%",
+                maxWidth: '80%',
               }}
             >
-              <Text style={{ color: isStudent ? "white" : "black" }}>
+              <Text style={{ color: isStudent ? 'white' : 'black' }}>
                 {item.text}
               </Text>
 
@@ -71,7 +69,7 @@ export default function ChatScreen() {
                 style={{
                   marginTop: 4,
                   fontSize: 12,
-                  color: isStudent ? "#ddd" : "#666",
+                  color: isStudent ? '#ddd' : '#666',
                 }}
               >
                 {item.time}
@@ -81,7 +79,7 @@ export default function ChatScreen() {
         }}
       />
 
-      <View style={{ flexDirection: "row", gap: 8, marginTop: 12 }}>
+      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         <TextInput
           placeholder="Type a message..."
           value={messageText}
@@ -91,7 +89,7 @@ export default function ChatScreen() {
           style={{
             flex: 1,
             borderWidth: 1,
-            borderColor: "#ddd",
+            borderColor: '#ddd',
             borderRadius: 10,
             padding: 12,
           }}
@@ -100,13 +98,13 @@ export default function ChatScreen() {
         <Pressable
           onPress={sendMessage}
           style={{
-            backgroundColor: "black",
+            backgroundColor: 'black',
             padding: 12,
             borderRadius: 10,
-            justifyContent: "center",
+            justifyContent: 'center',
           }}
         >
-          <Text style={{ color: "white", fontWeight: "600" }}>Send</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>Send</Text>
         </Pressable>
       </View>
     </View>

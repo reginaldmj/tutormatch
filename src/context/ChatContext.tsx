@@ -1,15 +1,13 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { mockChatMessagesByConversation } from '../data/mockChatMessages';
+import { createContext, ReactNode, useContext, useState } from 'react';
+import { supabase } from '../lib/supabase';
 import { ChatMessage } from '../types/chat';
 
 type ChatContextType = {
   messagesByConversation: Record<string, ChatMessage[]>;
-  addMessage: (conversationId: string, message: ChatMessage) => void;
-  getLastMessage: (conversationId: string) => ChatMessage | undefined;
+  loadMessages: (tutorId: string) => Promise<void>;
+  addMessage: (tutorId: string, tutorName: string, text: string) => Promise<void>;
+  getLastMessage: (tutorId: string) => ChatMessage | undefined;
 };
-
-const STORAGE_KEY = 'chat_messages';
 
 const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
@@ -18,63 +16,80 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     Record<string, ChatMessage[]>
   >({});
 
-  // 🔹 Load messages from storage on app start
-  useEffect(() => {
-    async function loadMessages() {
-      try {
-        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+  async function loadMessages(tutorId: string) {
+    const { data, error } = await supabase
+      .from('messages')
+      .select('*')
+      .eq('tutor_id', tutorId)
+      .order('created_at', { ascending: true });
 
-        if (stored) {
-          setMessagesByConversation(JSON.parse(stored));
-        } else {
-          setMessagesByConversation(mockChatMessagesByConversation);
-        }
-      } catch (error) {
-        console.log('Error loading messages:', error);
-        setMessagesByConversation(mockChatMessagesByConversation);
-      }
+    console.log('MESSAGES DATA:', data);
+    console.log('MESSAGES ERROR:', error);
+
+    if (!error && data) {
+      setMessagesByConversation((current) => ({
+        ...current,
+        [tutorId]: data.map((message) => ({
+          id: message.id,
+          tutorId: message.tutor_id,
+          tutorName: message.tutor_name,
+          sender: 'student',
+          text: message.text,
+          time: new Date(message.created_at).toLocaleTimeString([], {
+            hour: 'numeric',
+            minute: '2-digit',
+          }),
+        })),
+      }));
     }
-
-    loadMessages();
-  }, []);
-
-  // 🔹 Save messages whenever they change
-  useEffect(() => {
-    async function saveMessages() {
-      try {
-        await AsyncStorage.setItem(
-          STORAGE_KEY,
-          JSON.stringify(messagesByConversation),
-        );
-      } catch (error) {
-        console.log('Error saving messages:', error);
-      }
-    }
-
-    // avoid saving empty initial state before load
-    if (Object.keys(messagesByConversation).length > 0) {
-      saveMessages();
-    }
-  }, [messagesByConversation]);
-
-  function addMessage(conversationId: string, message: ChatMessage) {
-    setMessagesByConversation((currentMessages) => ({
-      ...currentMessages,
-      [conversationId]: [
-        ...(currentMessages[conversationId] ?? []),
-        message,
-      ],
-    }));
   }
 
-  function getLastMessage(conversationId: string) {
-    const messages = messagesByConversation[conversationId] ?? [];
+  async function addMessage(tutorId: string, tutorName: string, text: string) {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({
+        sender_id: user.id,
+        tutor_id: tutorId,
+        tutor_name: tutorName,
+        text,
+      })
+      .select()
+      .single();
+
+    console.log('ADD MESSAGE DATA:', data);
+    console.log('ADD MESSAGE ERROR:', error);
+
+    if (!error && data) {
+      const newMessage: ChatMessage = {
+        id: data.id,
+        tutorId: data.tutor_id,
+        tutorName: data.tutor_name,
+        sender: 'student',
+        text: data.text,
+        time: 'Now',
+      };
+
+      setMessagesByConversation((current) => ({
+        ...current,
+        [tutorId]: [...(current[tutorId] ?? []), newMessage],
+      }));
+    }
+  }
+
+  function getLastMessage(tutorId: string) {
+    const messages = messagesByConversation[tutorId] ?? [];
     return messages[messages.length - 1];
   }
 
   return (
     <ChatContext.Provider
-      value={{ messagesByConversation, addMessage, getLastMessage }}
+      value={{ messagesByConversation, loadMessages, addMessage, getLastMessage }}
     >
       {children}
     </ChatContext.Provider>

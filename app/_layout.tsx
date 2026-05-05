@@ -4,8 +4,10 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 
-import { supabase } from '../src/lib/supabase';
 import { useColorScheme } from '@/hooks/use-color-scheme';
+import { BookingProvider } from '@/src/context/BookingContext';
+import { ChatProvider } from '@/src/context/ChatContext';
+import { supabase } from '@/src/lib/supabase';
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
@@ -13,13 +15,11 @@ export default function RootLayout() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get current session
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session);
       setLoading(false);
     });
 
-    // Listen for auth changes
     const { data: listener } = supabase.auth.onAuthStateChange(
       (_event, session) => {
         setSession(session);
@@ -47,16 +47,21 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="auth/login" />
-        <Stack.Screen name="auth/signup" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="tutor/[id]" />
-        <Stack.Screen name="booking/[tutorId]" />
-        <Stack.Screen name="chat/[id]" />
-        <Stack.Screen name="modal" />
-      </Stack>
-      <StatusBar style="auto" />
+      <BookingProvider>
+        <ChatProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="auth/login" />
+            <Stack.Screen name="auth/signup" />
+            <Stack.Screen name="(tabs)" />
+            <Stack.Screen name="tutor/[id]" />
+            <Stack.Screen name="booking/[tutorId]" />
+            <Stack.Screen name="chat/[id]" />
+            <Stack.Screen name="modal" />
+          </Stack>
+
+          <StatusBar style="auto" />
+        </ChatProvider>
+      </BookingProvider>
     </ThemeProvider>
   );
-} 
+}
