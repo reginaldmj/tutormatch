@@ -13,84 +13,74 @@ import { TutorCard } from '../../src/components/TutorCard';
 import { getTutors } from '../../src/services/tutors';
 
 export default function HomeScreen() {
-  // Stores tutor rows loaded from Supabase
+  // Tutor rows loaded from Supabase
   const [tutors, setTutors] = useState<any[]>([]);
 
-  // Controls first-page loading state
+  // First-load spinner state
   const [loading, setLoading] = useState(true);
 
-  // Controls pull-to-refresh spinner
+  // Pull-to-refresh spinner state
   const [refreshing, setRefreshing] = useState(false);
 
-  // Search text
+  // User-facing error message
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Search/filter state
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Price filter
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
-
-  // Rating filter
   const [minRating, setMinRating] = useState<number | null>(null);
 
-  // Initial load when screen mounts
+  // Load tutors when the Home screen first mounts
   useEffect(() => {
     loadTutors();
   }, []);
 
-  // Reusable tutor loader
+  // Fetch tutors from Supabase
   async function loadTutors() {
     try {
-      const data = await getTutors();
+      setErrorMessage('');
 
-      // Save tutor data into state
+      const data = await getTutors();
       setTutors(data ?? []);
     } catch (error) {
       console.log('LOAD TUTORS ERROR:', error);
+      setErrorMessage('Could not load tutors. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }
 
-  // Pull-to-refresh handler
+  // Pull-to-refresh action
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-
     await loadTutors();
   }, []);
 
-  // Filter tutors based on search + filters
+  // Apply search, price, and rating filters
   const filteredTutors = tutors.filter((tutor) => {
     const query = searchQuery.toLowerCase();
 
-    // Match name or subject
     const matchesSearch =
       tutor.name.toLowerCase().includes(query) ||
       tutor.subject.toLowerCase().includes(query);
 
-    // Match price filter
-    const matchesPrice =
-      maxPrice === null || tutor.price <= maxPrice;
+    const matchesPrice = maxPrice === null || tutor.price <= maxPrice;
 
-    // Match rating filter
     const matchesRating =
-      minRating === null ||
-      Number(tutor.rating) >= minRating;
+      minRating === null || Number(tutor.rating) >= minRating;
 
-    return (
-      matchesSearch &&
-      matchesPrice &&
-      matchesRating
-    );
+    return matchesSearch && matchesPrice && matchesRating;
   });
 
-  // Reset all filters
+  // Reset all filters to default
   function clearFilters() {
     setSearchQuery('');
     setMaxPrice(null);
     setMinRating(null);
   }
 
-  // First loading state
+  // Initial loading state
   if (loading) {
     return (
       <View style={{ flex: 1, padding: 20 }}>
@@ -99,16 +89,36 @@ export default function HomeScreen() {
     );
   }
 
+  // Error state with retry action
+  if (errorMessage) {
+    return (
+      <View style={{ flex: 1, padding: 20 }}>
+        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
+          Find a Tutor
+        </Text>
+
+        <Text style={{ marginBottom: 16 }}>{errorMessage}</Text>
+
+        <Pressable
+          onPress={loadTutors}
+          style={{
+            backgroundColor: 'black',
+            padding: 14,
+            borderRadius: 10,
+          }}
+        >
+          <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
+            Retry
+          </Text>
+        </Pressable>
+      </View>
+    );
+  }
+
   return (
     <View style={{ flex: 1, padding: 20 }}>
       {/* Page title */}
-      <Text
-        style={{
-          fontSize: 28,
-          fontWeight: '700',
-          marginBottom: 16,
-        }}
-      >
+      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
         Find a Tutor
       </Text>
 
@@ -127,22 +137,9 @@ export default function HomeScreen() {
       />
 
       {/* Price filter */}
-      <Text
-        style={{
-          fontWeight: '600',
-          marginBottom: 8,
-        }}
-      >
-        Price
-      </Text>
+      <Text style={{ fontWeight: '600', marginBottom: 8 }}>Price</Text>
 
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: 8,
-          marginBottom: 16,
-        }}
-      >
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
         {[null, 30, 40, 50].map((price) => (
           <Pressable
             key={price ?? 'all'}
@@ -152,49 +149,21 @@ export default function HomeScreen() {
               paddingHorizontal: 14,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor:
-                maxPrice === price
-                  ? 'black'
-                  : '#ddd',
-              backgroundColor:
-                maxPrice === price
-                  ? 'black'
-                  : 'white',
+              borderColor: maxPrice === price ? 'black' : '#ddd',
+              backgroundColor: maxPrice === price ? 'black' : 'white',
             }}
           >
-            <Text
-              style={{
-                color:
-                  maxPrice === price
-                    ? 'white'
-                    : 'black',
-              }}
-            >
-              {price === null
-                ? 'All'
-                : `Under $${price}`}
+            <Text style={{ color: maxPrice === price ? 'white' : 'black' }}>
+              {price === null ? 'All' : `Under $${price}`}
             </Text>
           </Pressable>
         ))}
       </View>
 
       {/* Rating filter */}
-      <Text
-        style={{
-          fontWeight: '600',
-          marginBottom: 8,
-        }}
-      >
-        Rating
-      </Text>
+      <Text style={{ fontWeight: '600', marginBottom: 8 }}>Rating</Text>
 
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: 8,
-          marginBottom: 16,
-        }}
-      >
+      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
         {[null, 4.5, 4.8].map((rating) => (
           <Pressable
             key={rating ?? 'all'}
@@ -204,71 +173,39 @@ export default function HomeScreen() {
               paddingHorizontal: 14,
               borderRadius: 999,
               borderWidth: 1,
-              borderColor:
-                minRating === rating
-                  ? 'black'
-                  : '#ddd',
-              backgroundColor:
-                minRating === rating
-                  ? 'black'
-                  : 'white',
+              borderColor: minRating === rating ? 'black' : '#ddd',
+              backgroundColor: minRating === rating ? 'black' : 'white',
             }}
           >
-            <Text
-              style={{
-                color:
-                  minRating === rating
-                    ? 'white'
-                    : 'black',
-              }}
-            >
-              {rating === null
-                ? 'All'
-                : `${rating}+ stars`}
+            <Text style={{ color: minRating === rating ? 'white' : 'black' }}>
+              {rating === null ? 'All' : `${rating}+ stars`}
             </Text>
           </Pressable>
         ))}
       </View>
 
-      {/* Clear filters */}
-      <Pressable
-        onPress={clearFilters}
-        style={{ marginBottom: 16 }}
-      >
-        <Text style={{ fontWeight: '600' }}>
-          Clear filters
-        </Text>
+      {/* Reset filters */}
+      <Pressable onPress={clearFilters} style={{ marginBottom: 16 }}>
+        <Text style={{ fontWeight: '600' }}>Clear filters</Text>
       </Pressable>
 
-      {/* Empty state */}
+      {/* Tutor results */}
       {filteredTutors.length === 0 ? (
         <Text>No tutors found.</Text>
       ) : (
         <FlatList
           data={filteredTutors}
           keyExtractor={(item) => item.id}
-
-          // Pull-to-refresh setup
           refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-            />
+            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
           }
-
           renderItem={({ item }) => (
             <TutorCard
               name={item.name}
               subject={item.subject}
               price={item.price}
               rating={item.rating}
-
-              // Navigate to tutor profile
-              onPress={() =>
-                router.push(
-                  `/tutor/${item.id}` as any,
-                )
-              }
+              onPress={() => router.push(`/tutor/${item.id}` as any)}
             />
           )}
         />
