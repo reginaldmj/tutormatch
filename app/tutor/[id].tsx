@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { getTutorById } from '../../src/services/tutors';
+import { Tutor } from '../../src/types/tutor';
 
 export default function TutorProfileScreen() {
   // Read the dynamic route parameter from /tutor/[id]
@@ -11,7 +12,7 @@ export default function TutorProfileScreen() {
   const tutorId = Array.isArray(id) ? id[0] : id;
 
   // Stores the tutor loaded from Supabase
-  const [tutor, setTutor] = useState<any>(null);
+  const [tutor, setTutor] = useState<Tutor | null>(null);
 
   // Controls loading UI while fetching tutor data
   const [loading, setLoading] = useState(true);

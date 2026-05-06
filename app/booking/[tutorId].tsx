@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { useBookings } from '../../src/context/BookingContext';
 import { getTutorById } from '../../src/services/tutors';
+import { Tutor } from '../../src/types/tutor';
 
 const times = ['9:00 AM', '11:00 AM', '2:00 PM', '4:00 PM'];
 
@@ -15,7 +16,7 @@ export default function BookingScreen() {
   const { addBooking } = useBookings();
 
   // Tutor data loaded from Supabase
-  const [tutor, setTutor] = useState<any>(null);
+  const [tutor, setTutor] = useState<Tutor | null>(null);
 
   // Screen loading state while tutor is being fetched
   const [loading, setLoading] = useState(true);

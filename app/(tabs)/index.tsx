@@ -11,10 +11,12 @@ import {
 
 import { TutorCard } from '../../src/components/TutorCard';
 import { getTutors } from '../../src/services/tutors';
+import { Tutor } from '../../src/types/tutor';
+
 
 export default function HomeScreen() {
   // Tutor rows loaded from Supabase
-  const [tutors, setTutors] = useState<any[]>([]);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
 
   // First-load spinner state
   const [loading, setLoading] = useState(true);

@@ -1,30 +1,27 @@
 import { supabase } from '../lib/supabase';
+import { Tutor } from '../types/tutor';
 
-export async function getTutors() {
+// Load all tutors from Supabase
+export async function getTutors(): Promise<Tutor[]> {
   const { data, error } = await supabase
     .from('tutors')
     .select('*')
     .order('name', { ascending: true });
 
-  console.log('TUTORS DATA:', data);
-  console.log('TUTORS ERROR:', error);
-
   if (error) {
     throw error;
   }
 
-  return data;
+  return data ?? [];
 }
 
-export async function getTutorById(id: string) {
+// Load one tutor by id from Supabase
+export async function getTutorById(id: string): Promise<Tutor> {
   const { data, error } = await supabase
     .from('tutors')
     .select('*')
     .eq('id', id)
     .single();
-
-  console.log('TUTOR DATA:', data);
-  console.log('TUTOR ERROR:', error);
 
   if (error) {
     throw error;
