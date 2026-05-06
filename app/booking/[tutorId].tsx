@@ -7,15 +7,27 @@ import { getTutorById } from '../../src/services/tutors';
 const times = ['9:00 AM', '11:00 AM', '2:00 PM', '4:00 PM'];
 
 export default function BookingScreen() {
+  // Read tutorId from the dynamic route: /booking/[tutorId]
   const { tutorId } = useLocalSearchParams();
   const id = Array.isArray(tutorId) ? tutorId[0] : tutorId;
 
+  // Supabase booking action from BookingContext
   const { addBooking } = useBookings();
 
+  // Tutor data loaded from Supabase
   const [tutor, setTutor] = useState<any>(null);
+
+  // Screen loading state while tutor is being fetched
   const [loading, setLoading] = useState(true);
+
+  // Selected appointment time
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
+
+  // Shows confirmation UI after booking is saved
   const [confirmed, setConfirmed] = useState(false);
+
+  // Prevents double-submitting the booking
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     async function loadTutor() {
@@ -35,17 +47,26 @@ export default function BookingScreen() {
   }, [id]);
 
   async function handleConfirmBooking() {
-    if (!tutor || !selectedTime) return;
+    // Guard against missing data or double taps
+    if (!tutor || !selectedTime || submitting) return;
 
-    await addBooking({
-      tutorId: tutor.id,
-      tutorName: tutor.name,
-      subject: tutor.subject,
-      time: selectedTime,
-      status: 'confirmed',
-    });
+    setSubmitting(true);
 
-    setConfirmed(true);
+    try {
+      await addBooking({
+        tutorId: tutor.id,
+        tutorName: tutor.name,
+        subject: tutor.subject,
+        time: selectedTime,
+        status: 'confirmed',
+      });
+
+      setConfirmed(true);
+    } catch (error) {
+      console.log('CONFIRM BOOKING ERROR:', error);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (loading) {
@@ -92,6 +113,8 @@ export default function BookingScreen() {
     );
   }
 
+  const confirmDisabled = !selectedTime || submitting;
+
   return (
     <View style={{ flex: 1, padding: 20 }}>
       <Text style={{ fontSize: 28, fontWeight: '700' }}>Book Session</Text>
@@ -100,9 +123,7 @@ export default function BookingScreen() {
 
       <Text style={{ marginTop: 4 }}>{tutor.subject}</Text>
 
-      <Text style={{ marginTop: 20, fontWeight: '600' }}>
-        Choose a time
-      </Text>
+      <Text style={{ marginTop: 20, fontWeight: '600' }}>Choose a time</Text>
 
       {times.map((time) => (
         <Pressable
@@ -121,17 +142,17 @@ export default function BookingScreen() {
       ))}
 
       <Pressable
-        disabled={!selectedTime}
+        disabled={confirmDisabled}
         onPress={handleConfirmBooking}
         style={{
           marginTop: 24,
-          backgroundColor: selectedTime ? 'black' : '#ccc',
+          backgroundColor: confirmDisabled ? '#ccc' : 'black',
           padding: 14,
           borderRadius: 10,
         }}
       >
         <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
-          Confirm Booking
+          {submitting ? 'Booking...' : 'Confirm Booking'}
         </Text>
       </Pressable>
     </View>
