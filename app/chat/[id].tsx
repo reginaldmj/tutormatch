@@ -1,23 +1,36 @@
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { FlatList, Pressable, Text, TextInput, View } from 'react-native';
-import { useChat } from '../../src/context/ChatContext';
 import { useBookings } from '../../src/context/BookingContext';
+import { useChat } from '../../src/context/ChatContext';
 
 export default function ChatScreen() {
+  // Read tutor id from route: /chat/[id]
   const { id } = useLocalSearchParams();
   const tutorId = Array.isArray(id) ? id[0] : id;
 
+  // Bookings let us find the tutor name for this chat
   const { bookings } = useBookings();
+
+  // Chat context handles loading and sending Supabase messages
   const { messagesByConversation, loadMessages, addMessage } = useChat();
 
+  // Text currently typed into the input
   const [messageText, setMessageText] = useState('');
 
+  // Prevents double-sending messages
+  const [sending, setSending] = useState(false);
+
+  // Find the booking connected to this tutor
   const booking = bookings.find((booking) => booking.tutorId === tutorId);
+
+  // Fallback name if booking is not loaded yet
   const tutorName = booking?.tutorName ?? 'Tutor';
 
+  // Get messages for this specific tutor conversation
   const messages = tutorId ? messagesByConversation[tutorId] ?? [] : [];
 
+  // Load saved messages from Supabase when chat opens
   useEffect(() => {
     if (tutorId) {
       loadMessages(tutorId);
@@ -25,16 +38,26 @@ export default function ChatScreen() {
   }, [tutorId]);
 
   async function sendMessage() {
-    if (!tutorId) return;
-    if (!messageText.trim()) return;
+    // Guard against missing tutor, empty messages, or double taps
+    if (!tutorId || !messageText.trim() || sending) return;
 
-    await addMessage(tutorId, tutorName, messageText.trim());
+    setSending(true);
 
-    setMessageText('');
+    try {
+      await addMessage(tutorId, tutorName, messageText.trim());
+      setMessageText('');
+    } catch (error) {
+      console.log('SEND MESSAGE ERROR:', error);
+    } finally {
+      setSending(false);
+    }
   }
+
+  const sendDisabled = !messageText.trim() || sending;
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
+      {/* Chat header */}
       <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 4 }}>
         {tutorName}
       </Text>
@@ -43,6 +66,7 @@ export default function ChatScreen() {
         Tutor conversation
       </Text>
 
+      {/* Message list */}
       <FlatList
         data={messages}
         keyExtractor={(item) => item.id}
@@ -79,6 +103,7 @@ export default function ChatScreen() {
         }}
       />
 
+      {/* Message input row */}
       <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
         <TextInput
           placeholder="Type a message..."
@@ -86,6 +111,7 @@ export default function ChatScreen() {
           onChangeText={setMessageText}
           onSubmitEditing={sendMessage}
           returnKeyType="send"
+          editable={!sending}
           style={{
             flex: 1,
             borderWidth: 1,
@@ -96,15 +122,18 @@ export default function ChatScreen() {
         />
 
         <Pressable
+          disabled={sendDisabled}
           onPress={sendMessage}
           style={{
-            backgroundColor: 'black',
+            backgroundColor: sendDisabled ? '#ccc' : 'black',
             padding: 12,
             borderRadius: 10,
             justifyContent: 'center',
           }}
         >
-          <Text style={{ color: 'white', fontWeight: '600' }}>Send</Text>
+          <Text style={{ color: 'white', fontWeight: '600' }}>
+            {sending ? 'Sending...' : 'Send'}
+          </Text>
         </Pressable>
       </View>
     </View>

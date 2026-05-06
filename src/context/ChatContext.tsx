@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext, useState } from 'react';
+import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { ChatMessage } from '../types/chat';
 
@@ -30,6 +30,51 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }),
     };
   }
+
+  useEffect(() => {
+    loadAllMessages();
+  }, []);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('messages-realtime')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          console.log('REALTIME MESSAGE:', payload);
+
+          const newMessage = formatMessage(payload.new);
+          const tutorId = newMessage.tutorId;
+
+          setMessagesByConversation((current) => {
+            const existingMessages = current[tutorId] ?? [];
+
+            const alreadyExists = existingMessages.some(
+              (message) => message.id === newMessage.id,
+            );
+
+            if (alreadyExists) {
+              return current;
+            }
+
+            return {
+              ...current,
+              [tutorId]: [...existingMessages, newMessage],
+            };
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   async function loadMessages(tutorId: string) {
     const {
@@ -116,10 +161,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         time: 'Now',
       };
 
-      setMessagesByConversation((current) => ({
-        ...current,
-        [tutorId]: [...(current[tutorId] ?? []), newMessage],
-      }));
+      setMessagesByConversation((current) => {
+        const currentMessages = current[tutorId] ?? [];
+
+        const alreadyExists = currentMessages.some(
+          (message) => message.id === newMessage.id,
+        );
+
+        if (alreadyExists) {
+          return current;
+        }
+
+        return {
+          ...current,
+          [tutorId]: [...currentMessages, newMessage],
+        };
+      });
     }
   }
 
