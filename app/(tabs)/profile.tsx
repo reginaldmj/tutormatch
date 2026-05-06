@@ -1,8 +1,8 @@
-import { router } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
-import { useBookings } from '../../src/context/BookingContext';
-import { supabase } from '../../src/lib/supabase';
+import { router } from "expo-router";
+import { useEffect, useState } from "react";
+import { Pressable, Text, View } from "react-native";
+import { useBookings } from "../../src/context/BookingContext";
+import { supabase } from "../../src/lib/supabase";
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<any>(null);
@@ -25,13 +25,13 @@ export default function ProfileScreen() {
     if (!user) return;
 
     const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
       .single();
 
-    console.log('PROFILE DATA:', data);
-    console.log('PROFILE ERROR:', error);
+    console.log("PROFILE DATA:", data);
+    console.log("PROFILE ERROR:", error);
 
     if (data) {
       setProfile(data);
@@ -40,7 +40,7 @@ export default function ProfileScreen() {
 
   async function handleLogout() {
     await supabase.auth.signOut();
-    router.replace('/auth/login' as any);
+    router.replace("/auth/login" as any);
   }
 
   if (!profile) {
@@ -53,7 +53,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
-      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
+      <Text style={{ fontSize: 28, fontWeight: "700", marginBottom: 16 }}>
         Profile
       </Text>
 
@@ -61,40 +61,40 @@ export default function ProfileScreen() {
         style={{
           padding: 20,
           borderWidth: 1,
-          borderColor: '#ddd',
+          borderColor: "#ddd",
           borderRadius: 16,
-          backgroundColor: '#fafafa',
+          backgroundColor: "#fafafa",
         }}
       >
-        <Text style={{ fontSize: 22, fontWeight: '700' }}>
+        <Text style={{ fontSize: 22, fontWeight: "700" }}>
           {profile.full_name}
         </Text>
 
-        <Text style={{ marginTop: 6, color: '#666' }}>
-          {profile.role === 'student' ? 'Student' : 'Tutor'}
+        <Text style={{ marginTop: 6, color: "#666" }}>
+          {profile.role === "student" ? "Student" : "Tutor"}
         </Text>
 
         <View
           style={{
             height: 1,
-            backgroundColor: '#eee',
+            backgroundColor: "#eee",
             marginVertical: 16,
           }}
         />
 
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
           <View>
-            <Text style={{ fontSize: 18, fontWeight: '600' }}>
+            <Text style={{ fontSize: 18, fontWeight: "600" }}>
               {bookings.length}
             </Text>
-            <Text style={{ color: '#666' }}>Bookings</Text>
+            <Text style={{ color: "#666" }}>Bookings</Text>
           </View>
 
           <View>
-            <Text style={{ fontSize: 18, fontWeight: '600' }}>
+            <Text style={{ fontSize: 18, fontWeight: "600" }}>
               {uniqueTutors.length}
             </Text>
-            <Text style={{ color: '#666' }}>Chats</Text>
+            <Text style={{ color: "#666" }}>Chats</Text>
           </View>
         </View>
       </View>
@@ -103,12 +103,28 @@ export default function ProfileScreen() {
         onPress={handleLogout}
         style={{
           marginTop: 24,
-          backgroundColor: 'black',
+          backgroundColor: "black",
           padding: 14,
           borderRadius: 12,
         }}
       >
-        <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
+        <Pressable
+          onPress={() => router.push("/profile/edit" as any)}
+          style={{
+            marginTop: 24,
+            backgroundColor: "#eee",
+            padding: 14,
+            borderRadius: 12,
+          }}
+        >
+          <Text style={{ textAlign: "center", fontWeight: "600" }}>
+            Edit Profile
+          </Text>
+        </Pressable>
+
+        <Text
+          style={{ color: "white", textAlign: "center", fontWeight: "600" }}
+        >
           Log Out
         </Text>
       </Pressable>

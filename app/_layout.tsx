@@ -57,6 +57,7 @@ export default function RootLayout() {
             <Stack.Screen name="booking/[tutorId]" />
             <Stack.Screen name="chat/[id]" />
             <Stack.Screen name="modal" />
+            <Stack.Screen name="profile/edit" />
           </Stack>
 
           <StatusBar style="auto" />
