@@ -1,0 +1,17 @@
+# =========================================
+# TutorMatch Environment Variables
+# =========================================
+
+# Supabase project URL
+# Found in:
+# Supabase Dashboard
+# → Project Settings
+# → API
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+
+# Supabase public anon key
+# Found in:
+# Supabase Dashboard
+# → Project Settings
+# → API
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
