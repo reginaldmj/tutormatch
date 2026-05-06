@@ -1,9 +1,11 @@
-import { FlatList, Pressable, Text, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
 import { useBookings } from '../../src/context/BookingContext';
 
 export default function BookingsScreen() {
-  const { bookings, loading, cancelBooking } = useBookings();
+  // Pull bookings, loading state, refresh function, and cancel action from context
+  const { bookings, loading, loadBookings, cancelBooking } = useBookings();
 
+  // Show loading state while bookings are being fetched from Supabase
   if (loading) {
     return (
       <View style={{ flex: 1, padding: 20 }}>
@@ -14,16 +16,24 @@ export default function BookingsScreen() {
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
+      {/* Page title */}
       <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
         My Bookings
       </Text>
 
+      {/* Empty state */}
       {bookings.length === 0 ? (
         <Text>No bookings yet.</Text>
       ) : (
         <FlatList
           data={bookings}
           keyExtractor={(item) => item.id}
+          refreshControl={
+            <RefreshControl
+              refreshing={loading}
+              onRefresh={loadBookings}
+            />
+          }
           renderItem={({ item }) => (
             <View
               style={{
@@ -34,14 +44,17 @@ export default function BookingsScreen() {
                 marginBottom: 12,
               }}
             >
+              {/* Tutor name */}
               <Text style={{ fontSize: 18, fontWeight: '600' }}>
                 {item.tutorName}
               </Text>
 
-              <Text>{item.subject}</Text>
-              <Text>{item.time}</Text>
-              <Text>Status: {item.status}</Text>
+              {/* Booking details */}
+              <Text style={{ marginTop: 4 }}>{item.subject}</Text>
+              <Text style={{ marginTop: 4 }}>{item.time}</Text>
+              <Text style={{ marginTop: 4 }}>Status: {item.status}</Text>
 
+              {/* Only show cancel button for active bookings */}
               {item.status !== 'cancelled' && (
                 <Pressable
                   onPress={() => cancelBooking(item.id)}
