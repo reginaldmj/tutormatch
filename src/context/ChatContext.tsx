@@ -1,34 +1,54 @@
-import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 
 import { supabase } from '../lib/supabase';
 import { ChatMessage } from '../types/chat';
 
 type ChatContextType = {
-  // Messages grouped by tutorId/conversation id
+  // Messages grouped by tutor id.
+  // Example:
+  // {
+  //   "tutor-123": [message1, message2]
+  // }
   messagesByConversation: Record<string, ChatMessage[]>;
 
-  // Load messages for one tutor conversation
+  // Loads messages for one tutor conversation.
   loadMessages: (tutorId: string) => Promise<void>;
 
-  // Load all messages so preview cards survive refresh
+  // Loads all messages for preview cards.
   loadAllMessages: () => Promise<void>;
 
-  // Save a new message to Supabase
-  addMessage: (tutorId: string, tutorName: string, text: string) => Promise<void>;
+  // Saves a new message to Supabase.
+  addMessage: (
+    tutorId: string,
+    tutorName: string,
+    text: string,
+  ) => Promise<void>;
 
-  // Used by Messages tab to show latest preview
-  getLastMessage: (tutorId: string) => ChatMessage | undefined;
+  // Gets the newest message for preview display.
+  getLastMessage: (
+    tutorId: string,
+  ) => ChatMessage | undefined;
 };
 
-const ChatContext = createContext<ChatContextType | undefined>(undefined);
+const ChatContext = createContext<
+  ChatContextType | undefined
+>(undefined);
 
-export function ChatProvider({ children }: { children: ReactNode }) {
-  // Global chat state for the app session
-  const [messagesByConversation, setMessagesByConversation] = useState<
-    Record<string, ChatMessage[]>
-  >({});
+export function ChatProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
+  const [messagesByConversation, setMessagesByConversation] =
+    useState<Record<string, ChatMessage[]>>({});
 
-  // Convert a Supabase row into the app's ChatMessage shape
+  // Converts a raw Supabase message row into the app's ChatMessage shape.
   function formatMessage(message: any): ChatMessage {
     return {
       id: message.id,
@@ -43,12 +63,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
   }
 
-  // Load all existing messages once when provider mounts
+  // Load saved messages once when ChatProvider mounts.
+  // This keeps message previews visible after refreshing the app.
   useEffect(() => {
     loadAllMessages();
   }, []);
 
-  // Subscribe to newly inserted messages from Supabase Realtime
+  // Subscribe to new rows inserted into the Supabase messages table.
+  // This powers realtime chat updates.
   useEffect(() => {
     const channel = supabase
       .channel('messages-realtime')
@@ -66,7 +88,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           setMessagesByConversation((current) => {
             const existingMessages = current[tutorId] ?? [];
 
-            // Avoid duplicates because addMessage also updates local state
             const alreadyExists = existingMessages.some(
               (message) => message.id === newMessage.id,
             );
@@ -84,13 +105,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       )
       .subscribe();
 
-    // Clean up subscription when provider unmounts
     return () => {
       supabase.removeChannel(channel);
     };
   }, []);
 
-  // Load messages for one tutor conversation
   async function loadMessages(tutorId: string) {
     const {
       data: { user },
@@ -118,7 +137,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Load all messages for preview cards
   async function loadAllMessages() {
     const {
       data: { user },
@@ -154,8 +172,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Insert a new message into Supabase
-  async function addMessage(tutorId: string, tutorName: string, text: string) {
+  async function addMessage(
+    tutorId: string,
+    tutorName: string,
+    text: string,
+  ) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -187,7 +208,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       setMessagesByConversation((current) => {
         const currentMessages = current[tutorId] ?? [];
 
-        // Avoid duplicates because realtime may also receive this message
         const alreadyExists = currentMessages.some(
           (message) => message.id === newMessage.id,
         );
@@ -204,7 +224,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  // Return newest message for a tutor conversation
   function getLastMessage(tutorId: string) {
     const messages = messagesByConversation[tutorId] ?? [];
     return messages[messages.length - 1];

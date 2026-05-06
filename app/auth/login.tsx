@@ -5,15 +5,15 @@ import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
 
 export default function LoginScreen() {
-  // Stores form input values
+  // Controlled form fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Prevents double-clicking login
+  // Prevents duplicate login requests
   const [loading, setLoading] = useState(false);
 
   async function handleLogin() {
-    // Basic validation
+    // Basic validation before calling Supabase
     if (!email.trim() || !password) {
       Alert.alert('Missing fields', 'Enter email and password.');
       return;
@@ -22,7 +22,7 @@ export default function LoginScreen() {
     setLoading(true);
 
     try {
-      // Sign in with Supabase Auth
+      // Supabase Auth verifies email/password
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
         password,
@@ -33,7 +33,7 @@ export default function LoginScreen() {
         return;
       }
 
-      // Send user to main app
+      // Move user into main app after successful login
       router.replace('/(tabs)' as any);
     } finally {
       setLoading(false);

@@ -1,20 +1,40 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
-
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
-
   return (
     <Tabs>
-      <Tabs.Screen name="index" options={{ title: 'Home' }} />
-      <Tabs.Screen name="bookings" options={{ title: 'Bookings' }} />
-      <Tabs.Screen name="messages" options={{ title: 'Messages' }} />
-      <Tabs.Screen name="profile" options={{ title: 'Profile' }} />
+      {/* Home tab: browse tutors, search, filter, and open tutor profiles */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+        }}
+      />
+
+      {/* Bookings tab: view confirmed/cancelled tutoring sessions */}
+      <Tabs.Screen
+        name="bookings"
+        options={{
+          title: 'Bookings',
+        }}
+      />
+
+      {/* Messages tab: view conversations unlocked by booked tutors */}
+      <Tabs.Screen
+        name="messages"
+        options={{
+          title: 'Messages',
+        }}
+      />
+
+      {/* Profile tab: view/edit profile, see stats, and log out */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profile',
+        }}
+      />
     </Tabs>
   );
 }

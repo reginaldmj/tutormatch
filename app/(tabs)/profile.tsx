@@ -2,24 +2,26 @@ import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
+import { ScreenState } from '../../src/components/ScreenState';
 import { useBookings } from '../../src/context/BookingContext';
 import { supabase } from '../../src/lib/supabase';
 import { Profile } from '../../src/types/profile';
 
 export default function ProfileScreen() {
-  // Stores the current user's profile row from Supabase
+  // Stores the current user's profile row from Supabase.
   const [profile, setProfile] = useState<Profile | null>(null);
 
-  // Pull booking data from BookingContext for profile stats
+  // BookingContext provides booking data used for profile stats.
   const { bookings } = useBookings();
 
-  // Count unique tutors to estimate active conversations
+  // Count unique tutors from bookings to estimate active conversations.
   const uniqueTutors = bookings.filter(
     (booking, index, self) =>
       index === self.findIndex((item) => item.tutorId === booking.tutorId),
   );
 
-  // Reload profile every time this tab/screen comes into focus
+  // Reload profile whenever the Profile tab becomes active.
+  // This is useful after returning from Edit Profile.
   useFocusEffect(
     useCallback(() => {
       loadProfile();
@@ -27,14 +29,14 @@ export default function ProfileScreen() {
   );
 
   async function loadProfile() {
-    // Get currently logged-in Supabase user
+    // Get the currently logged-in Supabase user.
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) return;
 
-    // Fetch profile row connected to auth user id
+    // Load the profile row connected to this auth user.
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -52,19 +54,16 @@ export default function ProfileScreen() {
   }
 
   async function handleLogout() {
-    // End Supabase session
+    // End the Supabase auth session.
     await supabase.auth.signOut();
 
-    // Return user to login page
+    // Send the user back to login.
     router.replace('/auth/login' as any);
   }
 
+  // Shared loading state while profile is being fetched.
   if (!profile) {
-    return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text>Loading profile...</Text>
-      </View>
-    );
+    return <ScreenState message="Loading profile..." />;
   }
 
   return (
@@ -84,17 +83,17 @@ export default function ProfileScreen() {
           backgroundColor: '#fafafa',
         }}
       >
-        {/* User full name from Supabase */}
+        {/* User full name from Supabase profiles table */}
         <Text style={{ fontSize: 22, fontWeight: '700' }}>
           {profile.full_name}
         </Text>
 
-        {/* User role from Supabase */}
+        {/* User role from Supabase profiles table */}
         <Text style={{ marginTop: 6, color: '#666' }}>
           {profile.role === 'student' ? 'Student' : 'Tutor'}
         </Text>
 
-        {/* Divider */}
+        {/* Visual divider */}
         <View
           style={{
             height: 1,
@@ -103,7 +102,7 @@ export default function ProfileScreen() {
           }}
         />
 
-        {/* Stats */}
+        {/* Profile stats */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <View>
             <Text style={{ fontSize: 18, fontWeight: '600' }}>
@@ -121,7 +120,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Edit profile button */}
+      {/* Navigate to edit profile screen */}
       <Pressable
         onPress={() => router.push('/profile/edit' as any)}
         style={{

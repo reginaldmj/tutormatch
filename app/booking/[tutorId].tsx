@@ -1,54 +1,67 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+
+import { ScreenState } from '../../src/components/ScreenState';
 import { useBookings } from '../../src/context/BookingContext';
 import { getTutorById } from '../../src/services/tutors';
 import { Tutor } from '../../src/types/tutor';
 
+// Temporary hard-coded time slots.
+// Later, these can come from Supabase tutor availability.
 const times = ['9:00 AM', '11:00 AM', '2:00 PM', '4:00 PM'];
 
 export default function BookingScreen() {
-  // Read tutorId from the dynamic route: /booking/[tutorId]
+  // Read tutorId from route: /booking/[tutorId]
   const { tutorId } = useLocalSearchParams();
+
+  // Expo Router params can be string or string[], so normalize it.
   const id = Array.isArray(tutorId) ? tutorId[0] : tutorId;
 
-  // Supabase booking action from BookingContext
+  // BookingContext saves booking data to Supabase.
   const { addBooking } = useBookings();
 
-  // Tutor data loaded from Supabase
+  // Tutor loaded from Supabase.
   const [tutor, setTutor] = useState<Tutor | null>(null);
 
-  // Screen loading state while tutor is being fetched
+  // Loading state while tutor data is fetched.
   const [loading, setLoading] = useState(true);
 
-  // Selected appointment time
+  // User-friendly loading error.
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Selected booking time.
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
 
-  // Shows confirmation UI after booking is saved
+  // Shows success screen after booking completes.
   const [confirmed, setConfirmed] = useState(false);
 
-  // Prevents double-submitting the booking
+  // Prevents duplicate booking submissions.
   const [submitting, setSubmitting] = useState(false);
 
+  // Load tutor when screen opens.
   useEffect(() => {
-    async function loadTutor() {
-      if (!id) return;
-
-      try {
-        const data = await getTutorById(id);
-        setTutor(data);
-      } catch (error) {
-        console.log('LOAD BOOKING TUTOR ERROR:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     loadTutor();
   }, [id]);
 
+  async function loadTutor() {
+    if (!id) return;
+
+    try {
+      setErrorMessage('');
+      setLoading(true);
+
+      const data = await getTutorById(id);
+      setTutor(data);
+    } catch (error) {
+      console.log('LOAD BOOKING TUTOR ERROR:', error);
+      setErrorMessage('Could not load booking details. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function handleConfirmBooking() {
-    // Guard against missing data or double taps
     if (!tutor || !selectedTime || submitting) return;
 
     setSubmitting(true);
@@ -71,19 +84,22 @@ export default function BookingScreen() {
   }
 
   if (loading) {
+    return <ScreenState message="Loading booking..." />;
+  }
+
+  if (errorMessage) {
     return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text>Loading booking...</Text>
-      </View>
+      <ScreenState
+        title="Book Session"
+        message={errorMessage}
+        buttonText="Retry"
+        onPress={loadTutor}
+      />
     );
   }
 
   if (!tutor) {
-    return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text>Tutor not found.</Text>
-      </View>
-    );
+    return <ScreenState message="Tutor not found." />;
   }
 
   if (confirmed) {
@@ -118,12 +134,14 @@ export default function BookingScreen() {
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
+      {/* Page title */}
       <Text style={{ fontSize: 28, fontWeight: '700' }}>Book Session</Text>
 
+      {/* Tutor summary */}
       <Text style={{ marginTop: 12, fontSize: 18 }}>{tutor.name}</Text>
-
       <Text style={{ marginTop: 4 }}>{tutor.subject}</Text>
 
+      {/* Time selection */}
       <Text style={{ marginTop: 20, fontWeight: '600' }}>Choose a time</Text>
 
       {times.map((time) => (
@@ -142,6 +160,7 @@ export default function BookingScreen() {
         </Pressable>
       ))}
 
+      {/* Confirm button */}
       <Pressable
         disabled={confirmDisabled}
         onPress={handleConfirmBooking}

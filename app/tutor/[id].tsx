@@ -7,7 +7,7 @@ import { getTutorById } from '../../src/services/tutors';
 import { Tutor } from '../../src/types/tutor';
 
 export default function TutorProfileScreen() {
-  // Read the dynamic route parameter from /tutor/[id]
+  // Read tutor id from the dynamic route: /tutor/[id]
   const { id } = useLocalSearchParams();
 
   // Expo Router params can be string or string[], so normalize it
@@ -16,30 +16,27 @@ export default function TutorProfileScreen() {
   // Stores the tutor loaded from Supabase
   const [tutor, setTutor] = useState<Tutor | null>(null);
 
-  // Controls loading UI while fetching tutor data
+  // Controls loading UI while tutor data is being fetched
   const [loading, setLoading] = useState(true);
 
-  // Stores user-friendly error messages
+  // Stores a user-friendly error message if loading fails
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Load tutor whenever tutorId changes
+  // Load tutor whenever the route id changes
   useEffect(() => {
     loadTutor();
   }, [tutorId]);
 
   async function loadTutor() {
-    // If there is no id in the URL, stop early
     if (!tutorId) return;
 
     try {
-      // Clear previous errors and show loading state
       setErrorMessage('');
       setLoading(true);
 
-      // Fetch tutor from Supabase
+      // Fetch tutor row from Supabase
       const data = await getTutorById(tutorId);
 
-      // Save tutor into local state
       setTutor(data);
     } catch (error) {
       console.log('LOAD TUTOR ERROR:', error);
@@ -54,7 +51,7 @@ export default function TutorProfileScreen() {
     return <ScreenState message="Loading tutor..." />;
   }
 
-  // Shared error state with retry action
+  // Shared error state with retry
   if (errorMessage) {
     return (
       <ScreenState
@@ -66,7 +63,7 @@ export default function TutorProfileScreen() {
     );
   }
 
-  // Empty state if Supabase returns no tutor
+  // Empty state if no tutor was found
   if (!tutor) {
     return <ScreenState message="Tutor not found." />;
   }
@@ -88,7 +85,7 @@ export default function TutorProfileScreen() {
       {/* Tutor bio */}
       <Text style={{ marginTop: 16 }}>{tutor.bio}</Text>
 
-      {/* Navigate to booking screen */}
+      {/* Navigate to booking flow */}
       <Pressable
         onPress={() => router.push(`/booking/${tutor.id}` as any)}
         style={{

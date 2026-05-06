@@ -2,24 +2,28 @@ import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 
+import { ScreenState } from '../../src/components/ScreenState';
 import { supabase } from '../../src/lib/supabase';
 import { Profile } from '../../src/types/profile';
 
 export default function EditProfileScreen() {
-  // Form state
+  // Form state for editable profile fields
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<Profile['role']>('student');
 
-  // Loading states
+  // Tracks initial profile loading from Supabase
   const [loading, setLoading] = useState(true);
+
+  // Tracks save request state to prevent duplicate submissions
   const [saving, setSaving] = useState(false);
 
-  // Load profile when screen opens
+  // Load current profile when screen opens
   useEffect(() => {
     loadProfile();
   }, []);
 
   async function loadProfile() {
+    // Get currently logged-in user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -29,6 +33,7 @@ export default function EditProfileScreen() {
       return;
     }
 
+    // Fetch profile row linked to auth user id
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -41,6 +46,7 @@ export default function EditProfileScreen() {
       return;
     }
 
+    // Pre-fill form with current profile values
     if (data) {
       setFullName(data.full_name ?? '');
       setRole(data.role ?? 'student');
@@ -50,6 +56,7 @@ export default function EditProfileScreen() {
   }
 
   async function handleSave() {
+    // Validate required field
     if (!fullName.trim()) {
       Alert.alert('Missing name', 'Please enter your full name.');
       return;
@@ -57,6 +64,7 @@ export default function EditProfileScreen() {
 
     setSaving(true);
 
+    // Get current auth user before updating profile
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -66,6 +74,7 @@ export default function EditProfileScreen() {
       return;
     }
 
+    // Update profile row in Supabase
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -81,18 +90,16 @@ export default function EditProfileScreen() {
       return;
     }
 
+    // Return to Profile tab after successful update
     Alert.alert('Profile updated', 'Your profile was saved.');
     router.back();
   }
 
+  // Disable save while saving or if name is empty
   const saveDisabled = saving || !fullName.trim();
 
   if (loading) {
-    return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text>Loading profile...</Text>
-      </View>
-    );
+    return <ScreenState message="Loading profile..." />;
   }
 
   return (
@@ -102,7 +109,7 @@ export default function EditProfileScreen() {
         Edit Profile
       </Text>
 
-      {/* Full name field */}
+      {/* Full name input */}
       <Text style={{ fontWeight: '600', marginBottom: 8 }}>Full Name</Text>
 
       <TextInput

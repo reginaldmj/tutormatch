@@ -5,16 +5,16 @@ import { Alert, Pressable, Text, TextInput, View } from 'react-native';
 import { supabase } from '../../src/lib/supabase';
 
 export default function SignupScreen() {
-  // Stores form input values
+  // Controlled signup form fields
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Prevents duplicate signup requests
+  // Prevents duplicate signup submissions
   const [loading, setLoading] = useState(false);
 
   async function handleSignup() {
-    // Basic validation
+    // Basic validation before creating account
     if (!fullName.trim() || !email.trim() || !password) {
       Alert.alert('Missing fields', 'Enter name, email, and password.');
       return;
@@ -41,13 +41,14 @@ export default function SignupScreen() {
 
       const userId = data.user?.id;
 
+      // If email confirmation is enabled, user may need to verify first
       if (!userId) {
         Alert.alert('Account created', 'Check your email, then log in.');
         router.push('/auth/login' as any);
         return;
       }
 
-      // Create profile row linked to auth user
+      // Create matching app profile row
       const { error: profileError } = await supabase.from('profiles').insert({
         id: userId,
         full_name: fullName.trim(),

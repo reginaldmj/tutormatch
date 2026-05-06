@@ -1,5 +1,6 @@
 import { router } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
+
 import {
   FlatList,
   Pressable,
@@ -11,83 +12,127 @@ import {
 
 import { ScreenState } from '../../src/components/ScreenState';
 import { TutorCard } from '../../src/components/TutorCard';
+
 import { getTutors } from '../../src/services/tutors';
+
 import { Tutor } from '../../src/types/tutor';
 
 export default function HomeScreen() {
-  // Tutor rows loaded from Supabase
-  const [tutors, setTutors] = useState<Tutor[]>([]);
+  // Tutor rows loaded from Supabase.
+  const [tutors, setTutors] =
+    useState<Tutor[]>([]);
 
-  // First-load spinner state
-  const [loading, setLoading] = useState(true);
+  // Initial loading spinner state.
+  const [loading, setLoading] =
+    useState(true);
 
-  // Pull-to-refresh spinner state
-  const [refreshing, setRefreshing] = useState(false);
+  // Pull-to-refresh loading state.
+  const [refreshing, setRefreshing] =
+    useState(false);
 
-  // User-facing error message
-  const [errorMessage, setErrorMessage] = useState('');
+  // User-friendly error message.
+  const [errorMessage, setErrorMessage] =
+    useState('');
 
-  // Search/filter state
-  const [searchQuery, setSearchQuery] = useState('');
-  const [maxPrice, setMaxPrice] = useState<number | null>(null);
-  const [minRating, setMinRating] = useState<number | null>(null);
+  // Search/filter state.
+  const [searchQuery, setSearchQuery] =
+    useState('');
 
-  // Load tutors when the Home screen first mounts
+  const [maxPrice, setMaxPrice] =
+    useState<number | null>(null);
+
+  const [minRating, setMinRating] =
+    useState<number | null>(null);
+
+  // Load tutors when Home screen first mounts.
   useEffect(() => {
     loadTutors();
   }, []);
 
-  // Fetch tutors from Supabase
+  // Fetch tutors from Supabase.
   async function loadTutors() {
     try {
+      // Clear old errors before retrying.
       setErrorMessage('');
 
+      // Load tutors from the service layer.
       const data = await getTutors();
+
       setTutors(data ?? []);
     } catch (error) {
-      console.log('LOAD TUTORS ERROR:', error);
-      setErrorMessage('Could not load tutors. Please try again.');
+      console.log(
+        'LOAD TUTORS ERROR:',
+        error,
+      );
+
+      setErrorMessage(
+        'Could not load tutors. Please try again.',
+      );
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }
 
-  // Pull-to-refresh action
-  const handleRefresh = useCallback(async () => {
-    setRefreshing(true);
-    await loadTutors();
-  }, []);
+  // Pull-to-refresh action.
+  const handleRefresh =
+    useCallback(async () => {
+      setRefreshing(true);
 
-  // Apply search, price, and rating filters
-  const filteredTutors = tutors.filter((tutor) => {
-    const query = searchQuery.toLowerCase();
+      await loadTutors();
+    }, []);
 
-    const matchesSearch =
-      tutor.name.toLowerCase().includes(query) ||
-      tutor.subject.toLowerCase().includes(query);
+  // Apply:
+  // - search filtering
+  // - price filtering
+  // - rating filtering
+  const filteredTutors =
+    tutors.filter((tutor) => {
+      const query =
+        searchQuery.toLowerCase();
 
-    const matchesPrice = maxPrice === null || tutor.price <= maxPrice;
+      // Match tutor name OR subject.
+      const matchesSearch =
+        tutor.name
+          .toLowerCase()
+          .includes(query) ||
+        tutor.subject
+          .toLowerCase()
+          .includes(query);
 
-    const matchesRating =
-      minRating === null || Number(tutor.rating) >= minRating;
+      // Only include tutors under selected max price.
+      const matchesPrice =
+        maxPrice === null ||
+        tutor.price <= maxPrice;
 
-    return matchesSearch && matchesPrice && matchesRating;
-  });
+      // Only include tutors above selected rating.
+      const matchesRating =
+        minRating === null ||
+        Number(tutor.rating) >=
+          minRating;
 
-  // Reset all filters to default
+      return (
+        matchesSearch &&
+        matchesPrice &&
+        matchesRating
+      );
+    });
+
+  // Reset all filters back to defaults.
   function clearFilters() {
     setSearchQuery('');
     setMaxPrice(null);
     setMinRating(null);
   }
 
-  // Shared loading state
+  // Shared loading UI.
   if (loading) {
-    return <ScreenState message="Loading tutors..." />;
+    return (
+      <ScreenState message="Loading tutors..." />
+    );
   }
 
-  // Shared error state
+  // Shared error UI.
   if (errorMessage) {
     return (
       <ScreenState
@@ -100,9 +145,20 @@ export default function HomeScreen() {
   }
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
+    <View
+      style={{
+        flex: 1,
+        padding: 20,
+      }}
+    >
       {/* Page title */}
-      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
+      <Text
+        style={{
+          fontSize: 28,
+          fontWeight: '700',
+          marginBottom: 16,
+        }}
+      >
         Find a Tutor
       </Text>
 
@@ -120,57 +176,136 @@ export default function HomeScreen() {
         }}
       />
 
-      {/* Price filter */}
-      <Text style={{ fontWeight: '600', marginBottom: 8 }}>Price</Text>
+      {/* Price filter section */}
+      <Text
+        style={{
+          fontWeight: '600',
+          marginBottom: 8,
+        }}
+      >
+        Price
+      </Text>
 
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-        {[null, 30, 40, 50].map((price) => (
-          <Pressable
-            key={price ?? 'all'}
-            onPress={() => setMaxPrice(price)}
-            style={{
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: maxPrice === price ? 'black' : '#ddd',
-              backgroundColor: maxPrice === price ? 'black' : 'white',
-            }}
-          >
-            <Text style={{ color: maxPrice === price ? 'white' : 'black' }}>
-              {price === null ? 'All' : `Under $${price}`}
-            </Text>
-          </Pressable>
-        ))}
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: 8,
+          marginBottom: 16,
+        }}
+      >
+        {[null, 30, 40, 50].map(
+          (price) => (
+            <Pressable
+              key={price ?? 'all'}
+              onPress={() =>
+                setMaxPrice(price)
+              }
+              style={{
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+                borderRadius: 999,
+                borderWidth: 1,
+
+                borderColor:
+                  maxPrice === price
+                    ? 'black'
+                    : '#ddd',
+
+                backgroundColor:
+                  maxPrice === price
+                    ? 'black'
+                    : 'white',
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    maxPrice === price
+                      ? 'white'
+                      : 'black',
+                }}
+              >
+                {price === null
+                  ? 'All'
+                  : `Under $${price}`}
+              </Text>
+            </Pressable>
+          ),
+        )}
       </View>
 
-      {/* Rating filter */}
-      <Text style={{ fontWeight: '600', marginBottom: 8 }}>Rating</Text>
+      {/* Rating filter section */}
+      <Text
+        style={{
+          fontWeight: '600',
+          marginBottom: 8,
+        }}
+      >
+        Rating
+      </Text>
 
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 16 }}>
-        {[null, 4.5, 4.8].map((rating) => (
-          <Pressable
-            key={rating ?? 'all'}
-            onPress={() => setMinRating(rating)}
-            style={{
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: minRating === rating ? 'black' : '#ddd',
-              backgroundColor: minRating === rating ? 'black' : 'white',
-            }}
-          >
-            <Text style={{ color: minRating === rating ? 'white' : 'black' }}>
-              {rating === null ? 'All' : `${rating}+ stars`}
-            </Text>
-          </Pressable>
-        ))}
+      <View
+        style={{
+          flexDirection: 'row',
+          gap: 8,
+          marginBottom: 16,
+        }}
+      >
+        {[null, 4.5, 4.8].map(
+          (rating) => (
+            <Pressable
+              key={rating ?? 'all'}
+              onPress={() =>
+                setMinRating(rating)
+              }
+              style={{
+                paddingVertical: 10,
+                paddingHorizontal: 14,
+                borderRadius: 999,
+                borderWidth: 1,
+
+                borderColor:
+                  minRating === rating
+                    ? 'black'
+                    : '#ddd',
+
+                backgroundColor:
+                  minRating === rating
+                    ? 'black'
+                    : 'white',
+              }}
+            >
+              <Text
+                style={{
+                  color:
+                    minRating === rating
+                      ? 'white'
+                      : 'black',
+                }}
+              >
+                {rating === null
+                  ? 'All'
+                  : `${rating}+ stars`}
+              </Text>
+            </Pressable>
+          ),
+        )}
       </View>
 
       {/* Reset filters */}
-      <Pressable onPress={clearFilters} style={{ marginBottom: 16 }}>
-        <Text style={{ fontWeight: '600' }}>Clear filters</Text>
+      <Pressable
+        onPress={clearFilters}
+        style={{
+          marginBottom: 16,
+        }}
+      >
+        <Text
+          style={{
+            fontWeight: '600',
+          }}
+        >
+          Clear filters
+        </Text>
       </Pressable>
 
       {/* Tutor results */}
@@ -179,17 +314,31 @@ export default function HomeScreen() {
       ) : (
         <FlatList
           data={filteredTutors}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+          keyExtractor={(item) =>
+            item.id
           }
+
+          // Pull-to-refresh support.
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+            />
+          }
+
           renderItem={({ item }) => (
             <TutorCard
               name={item.name}
               subject={item.subject}
               price={item.price}
               rating={item.rating}
-              onPress={() => router.push(`/tutor/${item.id}` as any)}
+
+              // Navigate to tutor profile screen.
+              onPress={() =>
+                router.push(
+                  `/tutor/${item.id}` as any,
+                )
+              }
             />
           )}
         />

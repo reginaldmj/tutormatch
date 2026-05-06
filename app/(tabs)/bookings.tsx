@@ -1,4 +1,5 @@
 import { useState } from 'react';
+
 import {
   FlatList,
   Pressable,
@@ -11,13 +12,17 @@ import { ScreenState } from '../../src/components/ScreenState';
 import { useBookings } from '../../src/context/BookingContext';
 
 export default function BookingsScreen() {
-  // Pull booking data and booking actions from BookingContext
+  // BookingContext provides:
+  // - bookings loaded from Supabase
+  // - loading state
+  // - reload function
+  // - cancel booking action
   const { bookings, loading, loadBookings, cancelBooking } = useBookings();
 
-  // Stores user-friendly error messages for this screen
+  // User-friendly error shown on this screen only
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Reload bookings from Supabase
+  // Pull-to-refresh reloads bookings from Supabase
   async function handleRefresh() {
     try {
       setErrorMessage('');
@@ -28,7 +33,7 @@ export default function BookingsScreen() {
     }
   }
 
-  // Cancel one booking in Supabase
+  // Cancels a booking by updating its status in Supabase
   async function handleCancelBooking(bookingId: string) {
     try {
       setErrorMessage('');
@@ -39,7 +44,7 @@ export default function BookingsScreen() {
     }
   }
 
-  // Shared loading state
+  // Shared loading UI while bookings are being fetched
   if (loading) {
     return <ScreenState message="Loading bookings..." />;
   }
@@ -88,7 +93,7 @@ export default function BookingsScreen() {
               <Text style={{ marginTop: 4 }}>{item.time}</Text>
               <Text style={{ marginTop: 4 }}>Status: {item.status}</Text>
 
-              {/* Hide cancel button once booking is cancelled */}
+              {/* Cancel button only appears for active bookings */}
               {item.status !== 'cancelled' && (
                 <Pressable
                   onPress={() => handleCancelBooking(item.id)}

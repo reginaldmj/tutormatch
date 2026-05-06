@@ -1,21 +1,55 @@
 import { Pressable, Text, View } from 'react-native';
 
 type ScreenStateProps = {
+  // Optional large heading shown above the message.
+  // Example:
+  // "Tutor Profile"
   title?: string;
+
+  // Main message shown to the user.
+  // Examples:
+  // "Loading tutors..."
+  // "No bookings yet."
+  // "Could not load profile."
   message: string;
+
+  // Optional button label.
+  // Example:
+  // "Retry"
   buttonText?: string;
+
+  // Optional button action.
+  // Usually used for retrying failed requests.
   onPress?: () => void;
 };
 
-// Reusable screen state component for loading, error, and empty states
 export function ScreenState({
   title,
   message,
   buttonText,
   onPress,
 }: ScreenStateProps) {
+  // Only show button if BOTH text and action exist.
+  const showButton = Boolean(
+    buttonText && onPress,
+  );
+
   return (
-    <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
+    <View
+      style={{
+        flex: 1,
+
+        // Consistent spacing around screen states
+        padding: 20,
+
+        // Center vertically
+        justifyContent: 'center',
+
+        // Center horizontally
+        alignItems: 'center',
+      }}
+    >
+      {/* Optional title */}
       {title ? (
         <Text
           style={{
@@ -29,22 +63,29 @@ export function ScreenState({
         </Text>
       ) : null}
 
+      {/* Main message */}
       <Text
         style={{
           textAlign: 'center',
           color: '#666',
-          marginBottom: buttonText ? 20 : 0,
+
+          // Add spacing below message if button exists
+          marginBottom: showButton
+            ? 20
+            : 0,
         }}
       >
         {message}
       </Text>
 
-      {buttonText && onPress ? (
+      {/* Optional action button */}
+      {showButton ? (
         <Pressable
           onPress={onPress}
           style={{
             backgroundColor: 'black',
-            padding: 14,
+            paddingVertical: 14,
+            paddingHorizontal: 24,
             borderRadius: 12,
           }}
         >

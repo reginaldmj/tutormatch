@@ -7,23 +7,24 @@ import { useBookings } from '../../src/context/BookingContext';
 import { useChat } from '../../src/context/ChatContext';
 
 export default function MessagesScreen() {
-  // Bookings determine which tutors the user can message
+  // Bookings determine which tutors the user can message.
+  // A conversation only appears after the user books a tutor.
   const { bookings } = useBookings();
 
-  // ChatContext provides messages grouped by tutor and preview helpers
-  const {
-    messagesByConversation,
-    getLastMessage,
-    loadAllMessages,
-  } = useChat();
+  // ChatContext provides:
+  // - messages grouped by tutorId
+  // - preview helper
+  // - function to load saved messages from Supabase
+  const { messagesByConversation, getLastMessage, loadAllMessages } = useChat();
 
-  // Load all saved messages when Messages tab opens
-  // This keeps previews visible after refresh
+  // Load all saved messages when this tab opens.
+  // This keeps message previews visible after refreshing the app.
   useEffect(() => {
     loadAllMessages();
   }, []);
 
-  // Only show one conversation per tutor
+  // If a user books the same tutor multiple times,
+  // only show one message card for that tutor.
   const uniqueBookings = bookings.filter(
     (booking, index, self) =>
       index === self.findIndex((item) => item.tutorId === booking.tutorId),
@@ -45,7 +46,7 @@ export default function MessagesScreen() {
           extraData={messagesByConversation}
           keyExtractor={(item) => item.tutorId}
           renderItem={({ item }) => {
-            // Get latest message for this tutor
+            // Find the latest message for this tutor.
             const lastMessage = getLastMessage(item.tutorId);
 
             return (
@@ -69,7 +70,7 @@ export default function MessagesScreen() {
                   {lastMessage?.text ?? `Start chatting about ${item.subject}`}
                 </Text>
 
-                {/* Latest message time */}
+                {/* Latest message timestamp */}
                 <Text style={{ marginTop: 6, color: '#666' }}>
                   {lastMessage?.time ?? 'New conversation'}
                 </Text>

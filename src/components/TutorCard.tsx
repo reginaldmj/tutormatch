@@ -1,11 +1,20 @@
-import { Text, View, Pressable } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 
 type TutorCardProps = {
+  // Tutor display name
   name: string;
+
+  // Tutor subject/specialty
   subject: string;
+
+  // Hourly tutoring price
   price: number;
+
+  // Tutor rating shown to users
   rating: number;
-  onPress?: () => void;
+
+  // Runs when the user taps the card
+  onPress: () => void;
 };
 
 export function TutorCard({
@@ -24,12 +33,26 @@ export function TutorCard({
         borderColor: '#ddd',
         borderRadius: 12,
         marginBottom: 12,
+        backgroundColor: 'white',
       }}
     >
-      <Text style={{ fontSize: 18, fontWeight: '600' }}>{name}</Text>
-      <Text>{subject}</Text>
-      <Text>${price}/hr</Text>
-      <Text>⭐ {rating}</Text>
+      {/* Tutor name */}
+      <Text style={{ fontSize: 18, fontWeight: '700' }}>{name}</Text>
+
+      {/* Tutor subject */}
+      <Text style={{ marginTop: 4, color: '#444' }}>{subject}</Text>
+
+      {/* Price and rating row */}
+      <View
+        style={{
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          marginTop: 12,
+        }}
+      >
+        <Text>${price}/hour</Text>
+        <Text>⭐ {rating}</Text>
+      </View>
     </Pressable>
   );
 }
