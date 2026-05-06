@@ -1,13 +1,20 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+
 import { supabase } from '../../src/lib/supabase';
+import { Profile } from '../../src/types/profile';
 
 export default function EditProfileScreen() {
+  // Form state
   const [fullName, setFullName] = useState('');
-  const [role, setRole] = useState('student');
-  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState<Profile['role']>('student');
 
+  // Loading states
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Load profile when screen opens
   useEffect(() => {
     loadProfile();
   }, []);
@@ -28,8 +35,11 @@ export default function EditProfileScreen() {
       .eq('id', user.id)
       .single();
 
-    console.log('EDIT PROFILE DATA:', data);
-    console.log('EDIT PROFILE ERROR:', error);
+    if (error) {
+      console.log('EDIT PROFILE ERROR:', error);
+      setLoading(false);
+      return;
+    }
 
     if (data) {
       setFullName(data.full_name ?? '');
@@ -45,11 +55,16 @@ export default function EditProfileScreen() {
       return;
     }
 
+    setSaving(true);
+
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) return;
+    if (!user) {
+      setSaving(false);
+      return;
+    }
 
     const { error } = await supabase
       .from('profiles')
@@ -59,7 +74,7 @@ export default function EditProfileScreen() {
       })
       .eq('id', user.id);
 
-    console.log('SAVE PROFILE ERROR:', error);
+    setSaving(false);
 
     if (error) {
       Alert.alert('Update failed', error.message);
@@ -69,6 +84,8 @@ export default function EditProfileScreen() {
     Alert.alert('Profile updated', 'Your profile was saved.');
     router.back();
   }
+
+  const saveDisabled = saving || !fullName.trim();
 
   if (loading) {
     return (
@@ -80,16 +97,19 @@ export default function EditProfileScreen() {
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
+      {/* Page title */}
       <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
         Edit Profile
       </Text>
 
+      {/* Full name field */}
       <Text style={{ fontWeight: '600', marginBottom: 8 }}>Full Name</Text>
 
       <TextInput
         value={fullName}
         onChangeText={setFullName}
         placeholder="Full name"
+        editable={!saving}
         style={{
           borderWidth: 1,
           borderColor: '#ddd',
@@ -99,12 +119,14 @@ export default function EditProfileScreen() {
         }}
       />
 
+      {/* Role selector */}
       <Text style={{ fontWeight: '600', marginBottom: 8 }}>Role</Text>
 
       <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
-        {['student', 'tutor'].map((option) => (
+        {(['student', 'tutor'] as Profile['role'][]).map((option) => (
           <Pressable
             key={option}
+            disabled={saving}
             onPress={() => setRole(option)}
             style={{
               paddingVertical: 10,
@@ -122,16 +144,18 @@ export default function EditProfileScreen() {
         ))}
       </View>
 
+      {/* Save button */}
       <Pressable
+        disabled={saveDisabled}
         onPress={handleSave}
         style={{
-          backgroundColor: 'black',
+          backgroundColor: saveDisabled ? '#ccc' : 'black',
           padding: 14,
           borderRadius: 12,
         }}
       >
         <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
-          Save Profile
+          {saving ? 'Saving...' : 'Save Profile'}
         </Text>
       </Pressable>
     </View>

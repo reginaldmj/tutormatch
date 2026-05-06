@@ -1,6 +1,8 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+
+import { ScreenState } from '../../src/components/ScreenState';
 import { getTutorById } from '../../src/services/tutors';
 import { Tutor } from '../../src/types/tutor';
 
@@ -47,48 +49,26 @@ export default function TutorProfileScreen() {
     }
   }
 
-  // Loading state
+  // Shared loading state
   if (loading) {
-    return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text>Loading tutor...</Text>
-      </View>
-    );
+    return <ScreenState message="Loading tutor..." />;
   }
 
-  // Error state with retry button
+  // Shared error state with retry action
   if (errorMessage) {
     return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
-          Tutor Profile
-        </Text>
-
-        <Text style={{ marginBottom: 16 }}>{errorMessage}</Text>
-
-        <Pressable
-          onPress={loadTutor}
-          style={{
-            backgroundColor: 'black',
-            padding: 14,
-            borderRadius: 10,
-          }}
-        >
-          <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
-            Retry
-          </Text>
-        </Pressable>
-      </View>
+      <ScreenState
+        title="Tutor Profile"
+        message={errorMessage}
+        buttonText="Retry"
+        onPress={loadTutor}
+      />
     );
   }
 
   // Empty state if Supabase returns no tutor
   if (!tutor) {
-    return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text>Tutor not found.</Text>
-      </View>
-    );
+    return <ScreenState message="Tutor not found." />;
   }
 
   return (

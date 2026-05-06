@@ -1,4 +1,5 @@
 import { createContext, ReactNode, useContext, useEffect, useState } from 'react';
+
 import { supabase } from '../lib/supabase';
 import { Booking } from '../types/booking';
 
@@ -13,13 +14,30 @@ type BookingContextType = {
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
 export function BookingProvider({ children }: { children: ReactNode }) {
+  // Stores bookings loaded from Supabase
   const [bookings, setBookings] = useState<Booking[]>([]);
+
+  // Tracks loading state while fetching bookings
   const [loading, setLoading] = useState(true);
 
+  // Load bookings once when app/context mounts
   useEffect(() => {
     loadBookings();
   }, []);
 
+  // Converts a raw Supabase row into the app's Booking shape
+  function formatBooking(row: any): Booking {
+    return {
+      id: row.id,
+      tutorId: row.tutor_id,
+      tutorName: row.tutor_name,
+      subject: row.subject,
+      time: row.time,
+      status: row.status,
+    };
+  }
+
+  // Fetch bookings for the currently logged-in user
   async function loadBookings() {
     setLoading(true);
 
@@ -39,25 +57,17 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       .eq('student_id', user.id)
       .order('created_at', { ascending: false });
 
-    console.log('BOOKINGS DATA:', data);
-    console.log('BOOKINGS ERROR:', error);
-
-    if (!error && data) {
-      setBookings(
-        data.map((booking) => ({
-          id: booking.id,
-          tutorId: booking.tutor_id,
-          tutorName: booking.tutor_name,
-          subject: booking.subject,
-          time: booking.time,
-          status: booking.status,
-        })),
-      );
+    if (error) {
+      console.log('BOOKINGS ERROR:', error);
+      setLoading(false);
+      return;
     }
 
+    setBookings((data ?? []).map(formatBooking));
     setLoading(false);
   }
 
+  // Insert a new booking into Supabase
   async function addBooking(booking: Omit<Booking, 'id'>) {
     const {
       data: { user },
@@ -78,24 +88,20 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       .select()
       .single();
 
-    console.log('ADD BOOKING DATA:', data);
-    console.log('ADD BOOKING ERROR:', error);
+    if (error) {
+      console.log('ADD BOOKING ERROR:', error);
+      return;
+    }
 
-    if (!error && data) {
+    if (data) {
       setBookings((currentBookings) => [
-        {
-          id: data.id,
-          tutorId: data.tutor_id,
-          tutorName: data.tutor_name,
-          subject: data.subject,
-          time: data.time,
-          status: data.status,
-        },
+        formatBooking(data),
         ...currentBookings,
       ]);
     }
   }
 
+  // Mark a booking as cancelled in Supabase
   async function cancelBooking(bookingId: string) {
     const { data, error } = await supabase
       .from('bookings')
@@ -104,18 +110,15 @@ export function BookingProvider({ children }: { children: ReactNode }) {
       .select()
       .single();
 
-    console.log('CANCEL BOOKING DATA:', data);
-    console.log('CANCEL BOOKING ERROR:', error);
+    if (error) {
+      console.log('CANCEL BOOKING ERROR:', error);
+      return;
+    }
 
-    if (!error && data) {
+    if (data) {
       setBookings((currentBookings) =>
         currentBookings.map((booking) =>
-          booking.id === bookingId
-            ? {
-                ...booking,
-                status: 'cancelled',
-              }
-            : booking,
+          booking.id === bookingId ? formatBooking(data) : booking,
         ),
       );
     }

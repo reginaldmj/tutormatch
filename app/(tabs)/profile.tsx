@@ -1,25 +1,25 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+
 import { useBookings } from '../../src/context/BookingContext';
 import { supabase } from '../../src/lib/supabase';
+import { Profile } from '../../src/types/profile';
 
 export default function ProfileScreen() {
-  // Holds the user's profile row from Supabase
-  const [profile, setProfile] = useState<any>(null);
+  // Stores the current user's profile row from Supabase
+  const [profile, setProfile] = useState<Profile | null>(null);
 
-  // Pull real booking data from BookingContext
+  // Pull booking data from BookingContext for profile stats
   const { bookings } = useBookings();
 
-  // Count unique tutors for chat/conversation stats
+  // Count unique tutors to estimate active conversations
   const uniqueTutors = bookings.filter(
     (booking, index, self) =>
       index === self.findIndex((item) => item.tutorId === booking.tutorId),
   );
 
-  // useFocusEffect runs every time the Profile tab becomes active.
-  // This is better than useEffect here because profile data may change
-  // after returning from the Edit Profile screen.
+  // Reload profile every time this tab/screen comes into focus
   useFocusEffect(
     useCallback(() => {
       loadProfile();
@@ -27,22 +27,24 @@ export default function ProfileScreen() {
   );
 
   async function loadProfile() {
-    // Get the currently logged-in Supabase user
+    // Get currently logged-in Supabase user
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) return;
 
-    // Load that user's profile row
+    // Fetch profile row connected to auth user id
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
       .eq('id', user.id)
       .single();
 
-    console.log('PROFILE DATA:', data);
-    console.log('PROFILE ERROR:', error);
+    if (error) {
+      console.log('PROFILE ERROR:', error);
+      return;
+    }
 
     if (data) {
       setProfile(data);
@@ -53,7 +55,7 @@ export default function ProfileScreen() {
     // End Supabase session
     await supabase.auth.signOut();
 
-    // Send user back to login page
+    // Return user to login page
     router.replace('/auth/login' as any);
   }
 
@@ -67,6 +69,7 @@ export default function ProfileScreen() {
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
+      {/* Page title */}
       <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
         Profile
       </Text>
@@ -81,7 +84,7 @@ export default function ProfileScreen() {
           backgroundColor: '#fafafa',
         }}
       >
-        {/* User name from Supabase */}
+        {/* User full name from Supabase */}
         <Text style={{ fontSize: 22, fontWeight: '700' }}>
           {profile.full_name}
         </Text>
@@ -91,6 +94,7 @@ export default function ProfileScreen() {
           {profile.role === 'student' ? 'Student' : 'Tutor'}
         </Text>
 
+        {/* Divider */}
         <View
           style={{
             height: 1,
@@ -99,7 +103,7 @@ export default function ProfileScreen() {
           }}
         />
 
-        {/* Stats from app state */}
+        {/* Stats */}
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
           <View>
             <Text style={{ fontSize: 18, fontWeight: '600' }}>
@@ -117,7 +121,7 @@ export default function ProfileScreen() {
         </View>
       </View>
 
-      {/* Navigate to edit profile screen */}
+      {/* Edit profile button */}
       <Pressable
         onPress={() => router.push('/profile/edit' as any)}
         style={{

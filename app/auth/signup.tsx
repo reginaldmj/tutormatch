@@ -1,61 +1,72 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+
 import { supabase } from '../../src/lib/supabase';
 
 export default function SignupScreen() {
+  // Stores form input values
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  async function handleSignup() {
-    console.log('Signup button pressed');
+  // Prevents duplicate signup requests
+  const [loading, setLoading] = useState(false);
 
-    if (!fullName || !email || !password) {
+  async function handleSignup() {
+    // Basic validation
+    if (!fullName.trim() || !email.trim() || !password) {
       Alert.alert('Missing fields', 'Enter name, email, and password.');
       return;
     }
 
-    const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
-      password,
-    });
-
-    console.log('SIGNUP DATA:', data);
-    console.log('SIGNUP ERROR:', error);
-
-    if (error) {
-      Alert.alert('Signup failed', error.message);
+    if (password.length < 6) {
+      Alert.alert('Weak password', 'Password should be at least 6 characters.');
       return;
     }
 
-    const userId = data.user?.id;
+    setLoading(true);
 
-    if (!userId) {
-      Alert.alert(
-        'Account created',
-        'Check your email to confirm your account, then log in.',
-      );
+    try {
+      // Create Supabase Auth user
+      const { data, error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        Alert.alert('Signup failed', error.message);
+        return;
+      }
+
+      const userId = data.user?.id;
+
+      if (!userId) {
+        Alert.alert('Account created', 'Check your email, then log in.');
+        router.push('/auth/login' as any);
+        return;
+      }
+
+      // Create profile row linked to auth user
+      const { error: profileError } = await supabase.from('profiles').insert({
+        id: userId,
+        full_name: fullName.trim(),
+        role: 'student',
+      });
+
+      if (profileError) {
+        Alert.alert('Profile error', profileError.message);
+        return;
+      }
+
+      Alert.alert('Account created', 'Now log in.');
       router.push('/auth/login' as any);
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    const { error: profileError } = await supabase.from('profiles').insert({
-      id: userId,
-      full_name: fullName.trim(),
-      role: 'student',
-    });
-
-    console.log('PROFILE ERROR:', profileError);
-
-    if (profileError) {
-      Alert.alert('Profile error', profileError.message);
-      return;
-    }
-
-    Alert.alert('Account created', 'Now try logging in.');
-    router.push('/auth/login' as any);
   }
+
+  const disabled = loading || !fullName.trim() || !email.trim() || !password;
 
   return (
     <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
@@ -107,15 +118,16 @@ export default function SignupScreen() {
       />
 
       <Pressable
+        disabled={disabled}
         onPress={handleSignup}
         style={{
-          backgroundColor: 'black',
+          backgroundColor: disabled ? '#ccc' : 'black',
           padding: 14,
           borderRadius: 10,
         }}
       >
         <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
-          Create Account
+          {loading ? 'Creating account...' : 'Create Account'}
         </Text>
       </Pressable>
 

@@ -9,10 +9,10 @@ import {
   View,
 } from 'react-native';
 
+import { ScreenState } from '../../src/components/ScreenState';
 import { TutorCard } from '../../src/components/TutorCard';
 import { getTutors } from '../../src/services/tutors';
 import { Tutor } from '../../src/types/tutor';
-
 
 export default function HomeScreen() {
   // Tutor rows loaded from Supabase
@@ -82,38 +82,20 @@ export default function HomeScreen() {
     setMinRating(null);
   }
 
-  // Initial loading state
+  // Shared loading state
   if (loading) {
-    return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text>Loading tutors...</Text>
-      </View>
-    );
+    return <ScreenState message="Loading tutors..." />;
   }
 
-  // Error state with retry action
+  // Shared error state
   if (errorMessage) {
     return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
-          Find a Tutor
-        </Text>
-
-        <Text style={{ marginBottom: 16 }}>{errorMessage}</Text>
-
-        <Pressable
-          onPress={loadTutors}
-          style={{
-            backgroundColor: 'black',
-            padding: 14,
-            borderRadius: 10,
-          }}
-        >
-          <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
-            Retry
-          </Text>
-        </Pressable>
-      </View>
+      <ScreenState
+        title="Find a Tutor"
+        message={errorMessage}
+        buttonText="Retry"
+        onPress={loadTutors}
+      />
     );
   }
 
@@ -193,7 +175,7 @@ export default function HomeScreen() {
 
       {/* Tutor results */}
       {filteredTutors.length === 0 ? (
-        <Text>No tutors found.</Text>
+        <ScreenState message="No tutors found." />
       ) : (
         <FlatList
           data={filteredTutors}

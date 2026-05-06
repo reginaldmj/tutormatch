@@ -7,16 +7,12 @@ import {
   View,
 } from 'react-native';
 
+import { ScreenState } from '../../src/components/ScreenState';
 import { useBookings } from '../../src/context/BookingContext';
 
 export default function BookingsScreen() {
   // Pull booking data and booking actions from BookingContext
-  const {
-    bookings,
-    loading,
-    loadBookings,
-    cancelBooking,
-  } = useBookings();
+  const { bookings, loading, loadBookings, cancelBooking } = useBookings();
 
   // Stores user-friendly error messages for this screen
   const [errorMessage, setErrorMessage] = useState('');
@@ -25,14 +21,10 @@ export default function BookingsScreen() {
   async function handleRefresh() {
     try {
       setErrorMessage('');
-
       await loadBookings();
     } catch (error) {
       console.log('REFRESH BOOKINGS ERROR:', error);
-
-      setErrorMessage(
-        'Could not refresh bookings. Please try again.',
-      );
+      setErrorMessage('Could not refresh bookings. Please try again.');
     }
   }
 
@@ -40,67 +32,42 @@ export default function BookingsScreen() {
   async function handleCancelBooking(bookingId: string) {
     try {
       setErrorMessage('');
-
       await cancelBooking(bookingId);
     } catch (error) {
       console.log('CANCEL BOOKING ERROR:', error);
-
-      setErrorMessage(
-        'Could not cancel booking. Please try again.',
-      );
+      setErrorMessage('Could not cancel booking. Please try again.');
     }
   }
 
-  // Initial loading state while bookings are fetched
+  // Shared loading state
   if (loading) {
-    return (
-      <View style={{ flex: 1, padding: 20 }}>
-        <Text>Loading bookings...</Text>
-      </View>
-    );
+    return <ScreenState message="Loading bookings..." />;
   }
 
   return (
     <View style={{ flex: 1, padding: 20 }}>
       {/* Page title */}
-      <Text
-        style={{
-          fontSize: 28,
-          fontWeight: '700',
-          marginBottom: 16,
-        }}
-      >
+      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
         My Bookings
       </Text>
 
       {/* Error message */}
       {errorMessage ? (
-        <Text
-          style={{
-            marginBottom: 16,
-            color: 'red',
-          }}
-        >
+        <Text style={{ marginBottom: 16, color: 'red' }}>
           {errorMessage}
         </Text>
       ) : null}
 
       {/* Empty state */}
       {bookings.length === 0 ? (
-        <Text>No bookings yet.</Text>
+        <ScreenState message="No bookings yet." />
       ) : (
         <FlatList
           data={bookings}
           keyExtractor={(item) => item.id}
-
-          // Pull-to-refresh reloads bookings from Supabase
           refreshControl={
-            <RefreshControl
-              refreshing={loading}
-              onRefresh={handleRefresh}
-            />
+            <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
           }
-
           renderItem={({ item }) => (
             <View
               style={{
@@ -112,34 +79,19 @@ export default function BookingsScreen() {
               }}
             >
               {/* Tutor name */}
-              <Text
-                style={{
-                  fontSize: 18,
-                  fontWeight: '600',
-                }}
-              >
+              <Text style={{ fontSize: 18, fontWeight: '600' }}>
                 {item.tutorName}
               </Text>
 
               {/* Booking details */}
-              <Text style={{ marginTop: 4 }}>
-                {item.subject}
-              </Text>
-
-              <Text style={{ marginTop: 4 }}>
-                {item.time}
-              </Text>
-
-              <Text style={{ marginTop: 4 }}>
-                Status: {item.status}
-              </Text>
+              <Text style={{ marginTop: 4 }}>{item.subject}</Text>
+              <Text style={{ marginTop: 4 }}>{item.time}</Text>
+              <Text style={{ marginTop: 4 }}>Status: {item.status}</Text>
 
               {/* Hide cancel button once booking is cancelled */}
               {item.status !== 'cancelled' && (
                 <Pressable
-                  onPress={() =>
-                    handleCancelBooking(item.id)
-                  }
+                  onPress={() => handleCancelBooking(item.id)}
                   style={{
                     marginTop: 12,
                     backgroundColor: '#eee',
@@ -147,12 +99,7 @@ export default function BookingsScreen() {
                     borderRadius: 10,
                   }}
                 >
-                  <Text
-                    style={{
-                      textAlign: 'center',
-                      fontWeight: '600',
-                    }}
-                  >
+                  <Text style={{ textAlign: 'center', fontWeight: '600' }}>
                     Cancel Booking
                   </Text>
                 </Pressable>
