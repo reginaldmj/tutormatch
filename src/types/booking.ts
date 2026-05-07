@@ -1,26 +1,19 @@
-// Shape used by the app after converting
-// Supabase booking rows into frontend-friendly data.
+// Shape used by the app after converting Supabase booking rows.
 export type Booking = {
-  // Supabase booking id
   id: string;
-
-  // Tutor connected to this booking
   tutorId: string;
-
-  // Tutor display name
   tutorName: string;
-
-  // Subject booked for tutoring
   subject: string;
 
-  // Human-readable session time
-  // Example:
-  // "Friday at 3:00 PM"
+  // Legacy display field kept for easy UI rendering.
   time: string;
 
-  // Current booking state
-  // confirmed  -> active booking
-  // cancelled  -> user cancelled
-  // completed  -> finished session
+  // Structured real date/time fields.
+  sessionDate?: string | null;
+  sessionTime?: string | null;
+
   status: 'confirmed' | 'cancelled' | 'completed';
+
+  // Connected availability slot.
+  availabilitySlotId?: string | null;
 };

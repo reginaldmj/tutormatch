@@ -332,6 +332,7 @@ export default function HomeScreen() {
               subject={item.subject}
               price={item.price}
               rating={item.rating}
+              avatarUrl={item.avatar_url}
 
               // Navigate to tutor profile screen.
               onPress={() =>

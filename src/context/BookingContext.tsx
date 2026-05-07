@@ -6,57 +6,42 @@ import {
   useState,
 } from 'react';
 
+import { releaseAvailabilitySlot } from '../services/availability';
 import { supabase } from '../lib/supabase';
 import { Booking } from '../types/booking';
 
-// Defines everything the BookingContext exposes to the app.
 type BookingContextType = {
-  // Global list of bookings loaded from Supabase
+  // Bookings loaded from Supabase for the current user
   bookings: Booking[];
 
-  // Loading state while fetching bookings
+  // Loading state while bookings are being fetched
   loading: boolean;
 
   // Reload bookings from Supabase
   loadBookings: () => Promise<void>;
 
-  // Create a new booking
-  addBooking: (
-    booking: Omit<Booking, 'id'>,
-  ) => Promise<void>;
+  // Create a booking in Supabase
+  addBooking: (booking: Omit<Booking, 'id'>) => Promise<void>;
 
-  // Cancel an existing booking
-  cancelBooking: (
-    bookingId: string,
-  ) => Promise<void>;
+  // Cancel a booking in Supabase
+  cancelBooking: (bookingId: string) => Promise<void>;
 };
 
-// Create the React context.
-// Starts undefined until wrapped in BookingProvider.
-const BookingContext = createContext<
-  BookingContextType | undefined
->(undefined);
+const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
-export function BookingProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  // Global booking state shared across the app.
-  const [bookings, setBookings] = useState<
-    Booking[]
-  >([]);
+export function BookingProvider({ children }: { children: ReactNode }) {
+  // Global booking state shared across screens
+  const [bookings, setBookings] = useState<Booking[]>([]);
 
-  // Tracks loading state while fetching bookings.
+  // Used by the Bookings screen for loading UI
   const [loading, setLoading] = useState(true);
 
-  // Load bookings automatically when provider mounts.
+  // Load bookings once when the provider mounts
   useEffect(() => {
     loadBookings();
   }, []);
 
-  // Converts raw Supabase rows into frontend-friendly Booking objects.
-  // This creates a consistent structure used throughout the app.
+  // Converts Supabase snake_case columns into app camelCase fields
   function formatBooking(row: any): Booking {
     return {
       id: row.id,
@@ -65,64 +50,52 @@ export function BookingProvider({
       subject: row.subject,
       time: row.time,
       status: row.status,
+      availabilitySlotId: row.availability_slot_id,
     };
   }
 
-  // Loads all bookings for the currently logged-in user.
   async function loadBookings() {
     setLoading(true);
 
-    // Get current authenticated user from Supabase Auth.
+    // Get the logged-in Supabase user
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    // If no user exists, clear local state.
+    // If logged out, clear bookings
     if (!user) {
       setBookings([]);
       setLoading(false);
       return;
     }
 
-    // Fetch bookings belonging only to this student.
+    // Load only this user's bookings
     const { data, error } = await supabase
       .from('bookings')
       .select('*')
       .eq('student_id', user.id)
-      .order('created_at', {
-        ascending: false,
-      });
+      .order('created_at', { ascending: false });
 
     if (error) {
-      console.log(
-        'BOOKINGS ERROR:',
-        error,
-      );
-
+      console.log('BOOKINGS ERROR:', error);
       setLoading(false);
       return;
     }
 
-    // Save bookings into global state.
-    setBookings(
-      (data ?? []).map(formatBooking),
-    );
-
+    // Store formatted bookings in global state
+    setBookings((data ?? []).map(formatBooking));
     setLoading(false);
   }
 
-  // Creates a new booking in Supabase.
-  async function addBooking(
-    booking: Omit<Booking, 'id'>,
-  ) {
-    // Get currently logged-in user.
+  async function addBooking(booking: Omit<Booking, 'id'>) {
+    // Get the logged-in Supabase user
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) return;
 
-    // Insert booking row into Supabase.
+    // Insert booking into Supabase
     const { data, error } = await supabase
       .from('bookings')
       .insert({
@@ -132,64 +105,59 @@ export function BookingProvider({
         subject: booking.subject,
         time: booking.time,
         status: booking.status,
+
+        // Links booking back to the selected availability slot
+        availability_slot_id: booking.availabilitySlotId,
       })
       .select()
       .single();
 
     if (error) {
-      console.log(
-        'ADD BOOKING ERROR:',
-        error,
-      );
-
+      console.log('ADD BOOKING ERROR:', error);
       return;
     }
 
-    // Immediately update local app state after successful insert.
-    // This avoids needing a full refresh.
+    // Update local state immediately after successful insert
     if (data) {
-      setBookings(
-        (currentBookings) => [
-          formatBooking(data),
-          ...currentBookings,
-        ],
-      );
+      setBookings((currentBookings) => [
+        formatBooking(data),
+        ...currentBookings,
+      ]);
     }
   }
 
-  // Cancels an existing booking.
-  async function cancelBooking(
-    bookingId: string,
-  ) {
-    // Update booking status in Supabase.
+  async function cancelBooking(bookingId: string) {
+    // Find the booking before updating it so we still know
+    // which availability slot should be released.
+    const bookingToCancel = bookings.find(
+      (booking) => booking.id === bookingId,
+    );
+
+    // Mark booking as cancelled in Supabase
     const { data, error } = await supabase
       .from('bookings')
-      .update({
-        status: 'cancelled',
-      })
+      .update({ status: 'cancelled' })
       .eq('id', bookingId)
       .select()
       .single();
 
     if (error) {
-      console.log(
-        'CANCEL BOOKING ERROR:',
-        error,
-      );
-
+      console.log('CANCEL BOOKING ERROR:', error);
       return;
     }
 
-    // Update local booking state immediately after cancellation.
+    // If this booking was connected to an availability slot,
+    // make that slot available again.
+    if (bookingToCancel?.availabilitySlotId) {
+      await releaseAvailabilitySlot(bookingToCancel.availabilitySlotId);
+    }
+
+    // Update local state after cancellation
     if (data) {
-      setBookings(
-        (currentBookings) =>
-          currentBookings.map(
-            (booking) =>
-              booking.id === bookingId
-                ? formatBooking(data)
-                : booking,
-          ),
+      setBookings((currentBookings) =>
+        currentBookings.map((booking) =>
+          booking.id === bookingId ? formatBooking(data) : booking,
+        ),
       );
     }
   }
@@ -209,17 +177,11 @@ export function BookingProvider({
   );
 }
 
-// Custom hook used throughout the app.
-// Makes booking state/actions easier to access.
 export function useBookings() {
-  const context =
-    useContext(BookingContext);
+  const context = useContext(BookingContext);
 
-  // Prevents usage outside BookingProvider.
   if (!context) {
-    throw new Error(
-      'useBookings must be used inside BookingProvider',
-    );
+    throw new Error('useBookings must be used inside BookingProvider');
   }
 
   return context;

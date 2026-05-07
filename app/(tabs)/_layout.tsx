@@ -1,38 +1,46 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 
+import { useChat } from '../../src/context/ChatContext';
+
 export default function TabLayout() {
+  // Count unread messages for badge display.
+  const { unreadCount } = useChat();
+
   return (
     <Tabs>
-      {/* Home tab: browse tutors, search, filter, and open tutor profiles */}
       <Tabs.Screen
         name="index"
         options={{
           title: 'Home',
+          tabBarIcon: () => '🏠',
         }}
       />
 
-      {/* Bookings tab: view confirmed/cancelled tutoring sessions */}
       <Tabs.Screen
         name="bookings"
         options={{
           title: 'Bookings',
+          tabBarIcon: () => '📅',
         }}
       />
 
-      {/* Messages tab: view conversations unlocked by booked tutors */}
       <Tabs.Screen
         name="messages"
         options={{
           title: 'Messages',
+          tabBarIcon: () => '💬',
+
+          // Show badge only when there are unread messages.
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
 
-      {/* Profile tab: view/edit profile, see stats, and log out */}
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
+          tabBarIcon: () => '👤',
         }}
       />
     </Tabs>

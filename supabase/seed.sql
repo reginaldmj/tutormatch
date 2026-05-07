@@ -1,22 +1,16 @@
 -- TutorMatch seed data
--- This file inserts starter data for development/testing.
--- Run this after schema.sql if rebuilding the project.
+-- Run this after schema.sql during development.
 
--- =========================
--- STARTER TUTORS
--- =========================
-
--- Clear existing tutor rows first.
--- This prevents duplicate starter tutors during development.
+delete from tutor_availability;
 delete from tutors;
 
--- Insert sample tutors used by the app.
 insert into tutors (
   name,
   subject,
   price,
   rating,
-  bio
+  bio,
+  avatar_url
 )
 values
 (
@@ -24,22 +18,52 @@ values
   'Algebra & SAT Math',
   35,
   4.9,
-  'Experienced math tutor focused on building strong fundamentals.'
+  'Experienced math tutor focused on building strong fundamentals.',
+  'https://api.dicebear.com/7.x/initials/png?seed=John%20Doe'
 ),
 (
   'Jane Smith',
   'Python & Computer Science',
   45,
   4.8,
-  'I teach coding, problem solving, and computer science concepts.'
+  'I teach coding, problem solving, and computer science concepts.',
+  'https://api.dicebear.com/7.x/initials/png?seed=Jane%20Smith'
 ),
 (
   'Bob Johnson',
   'English & Essay Writing',
   30,
   4.7,
-  'Helping students improve writing clarity and structure.'
+  'Helping students improve writing clarity and structure.',
+  'https://api.dicebear.com/7.x/initials/png?seed=Bob%20Johnson'
 );
 
--- Verify inserted tutors.
+insert into tutor_availability (
+  tutor_id,
+  date,
+  time,
+  is_available
+)
+select id, '2026-05-12', '9:00 AM', true
+from tutors;
+
+insert into tutor_availability (
+  tutor_id,
+  date,
+  time,
+  is_available
+)
+select id, '2026-05-12', '11:00 AM', true
+from tutors;
+
+insert into tutor_availability (
+  tutor_id,
+  date,
+  time,
+  is_available
+)
+select id, '2026-05-13', '2:00 PM', true
+from tutors;
+
 select * from tutors;
+select * from tutor_availability;

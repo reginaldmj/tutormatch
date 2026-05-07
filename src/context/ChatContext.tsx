@@ -10,45 +10,22 @@ import { supabase } from '../lib/supabase';
 import { ChatMessage } from '../types/chat';
 
 type ChatContextType = {
-  // Messages grouped by tutor id.
-  // Example:
-  // {
-  //   "tutor-123": [message1, message2]
-  // }
   messagesByConversation: Record<string, ChatMessage[]>;
-
-  // Loads messages for one tutor conversation.
+  unreadCount: number;
   loadMessages: (tutorId: string) => Promise<void>;
-
-  // Loads all messages for preview cards.
   loadAllMessages: () => Promise<void>;
-
-  // Saves a new message to Supabase.
-  addMessage: (
-    tutorId: string,
-    tutorName: string,
-    text: string,
-  ) => Promise<void>;
-
-  // Gets the newest message for preview display.
-  getLastMessage: (
-    tutorId: string,
-  ) => ChatMessage | undefined;
+  addMessage: (tutorId: string, tutorName: string, text: string) => Promise<void>;
+  markConversationRead: (tutorId: string) => Promise<void>;
+  getLastMessage: (tutorId: string) => ChatMessage | undefined;
 };
 
-const ChatContext = createContext<
-  ChatContextType | undefined
->(undefined);
+const ChatContext = createContext<ChatContextType | undefined>(undefined);
 
-export function ChatProvider({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const [messagesByConversation, setMessagesByConversation] =
-    useState<Record<string, ChatMessage[]>>({});
+export function ChatProvider({ children }: { children: ReactNode }) {
+  const [messagesByConversation, setMessagesByConversation] = useState<
+    Record<string, ChatMessage[]>
+  >({});
 
-  // Converts a raw Supabase message row into the app's ChatMessage shape.
   function formatMessage(message: any): ChatMessage {
     return {
       id: message.id,
@@ -56,6 +33,7 @@ export function ChatProvider({
       tutorName: message.tutor_name,
       sender: 'student',
       text: message.text,
+      isRead: message.is_read ?? false,
       time: new Date(message.created_at).toLocaleTimeString([], {
         hour: 'numeric',
         minute: '2-digit',
@@ -63,14 +41,14 @@ export function ChatProvider({
     };
   }
 
-  // Load saved messages once when ChatProvider mounts.
-  // This keeps message previews visible after refreshing the app.
+  const unreadCount = Object.values(messagesByConversation)
+    .flat()
+    .filter((message) => !message.isRead).length;
+
   useEffect(() => {
     loadAllMessages();
   }, []);
 
-  // Subscribe to new rows inserted into the Supabase messages table.
-  // This powers realtime chat updates.
   useEffect(() => {
     const channel = supabase
       .channel('messages-realtime')
@@ -92,9 +70,7 @@ export function ChatProvider({
               (message) => message.id === newMessage.id,
             );
 
-            if (alreadyExists) {
-              return current;
-            }
+            if (alreadyExists) return current;
 
             return {
               ...current,
@@ -129,12 +105,10 @@ export function ChatProvider({
       return;
     }
 
-    if (data) {
-      setMessagesByConversation((current) => ({
-        ...current,
-        [tutorId]: data.map(formatMessage),
-      }));
-    }
+    setMessagesByConversation((current) => ({
+      ...current,
+      [tutorId]: (data ?? []).map(formatMessage),
+    }));
   }
 
   async function loadAllMessages() {
@@ -155,28 +129,22 @@ export function ChatProvider({
       return;
     }
 
-    if (data) {
-      const groupedMessages: Record<string, ChatMessage[]> = {};
+    const groupedMessages: Record<string, ChatMessage[]> = {};
 
-      data.forEach((message) => {
-        const tutorId = message.tutor_id;
+    (data ?? []).forEach((message) => {
+      const tutorId = message.tutor_id;
 
-        if (!groupedMessages[tutorId]) {
-          groupedMessages[tutorId] = [];
-        }
+      if (!groupedMessages[tutorId]) {
+        groupedMessages[tutorId] = [];
+      }
 
-        groupedMessages[tutorId].push(formatMessage(message));
-      });
+      groupedMessages[tutorId].push(formatMessage(message));
+    });
 
-      setMessagesByConversation(groupedMessages);
-    }
+    setMessagesByConversation(groupedMessages);
   }
 
-  async function addMessage(
-    tutorId: string,
-    tutorName: string,
-    text: string,
-  ) {
+  async function addMessage(tutorId: string, tutorName: string, text: string) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -190,6 +158,7 @@ export function ChatProvider({
         tutor_id: tutorId,
         tutor_name: tutorName,
         text,
+        is_read: true,
       })
       .select('*')
       .single();
@@ -212,9 +181,7 @@ export function ChatProvider({
           (message) => message.id === newMessage.id,
         );
 
-        if (alreadyExists) {
-          return current;
-        }
+        if (alreadyExists) return current;
 
         return {
           ...current,
@@ -222,6 +189,26 @@ export function ChatProvider({
         };
       });
     }
+  }
+
+  async function markConversationRead(tutorId: string) {
+    const { error } = await supabase
+      .from('messages')
+      .update({ is_read: true })
+      .eq('tutor_id', tutorId);
+
+    if (error) {
+      console.log('MARK CONVERSATION READ ERROR:', error);
+      return;
+    }
+
+    setMessagesByConversation((current) => ({
+      ...current,
+      [tutorId]: (current[tutorId] ?? []).map((message) => ({
+        ...message,
+        isRead: true,
+      })),
+    }));
   }
 
   function getLastMessage(tutorId: string) {
@@ -233,9 +220,11 @@ export function ChatProvider({
     <ChatContext.Provider
       value={{
         messagesByConversation,
+        unreadCount,
         loadMessages,
         loadAllMessages,
         addMessage,
+        markConversationRead,
         getLastMessage,
       }}
     >
