@@ -1,28 +1,29 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
+import { AppTheme, layout } from '@/constants/theme';
+
+import { AppBottomTabs } from '../../src/components/AppBottomTabs';
 import { ScreenState } from '../../src/components/ScreenState';
 import { getTutorById } from '../../src/services/tutors';
 import { Tutor } from '../../src/types/tutor';
 
 export default function TutorProfileScreen() {
-  // Read tutor id from the dynamic route: /tutor/[id]
   const { id } = useLocalSearchParams();
-
-  // Expo Router params can be string or string[], so normalize it
   const tutorId = Array.isArray(id) ? id[0] : id;
-
-  // Stores the tutor loaded from Supabase
   const [tutor, setTutor] = useState<Tutor | null>(null);
-
-  // Controls loading UI while tutor data is being fetched
   const [loading, setLoading] = useState(true);
-
-  // Stores a user-friendly error message if loading fails
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Load tutor whenever the route id changes
   useEffect(() => {
     loadTutor();
   }, [tutorId]);
@@ -34,7 +35,6 @@ export default function TutorProfileScreen() {
       setErrorMessage('');
       setLoading(true);
 
-      // Fetch tutor row from Supabase
       const data = await getTutorById(tutorId);
 
       setTutor(data);
@@ -46,59 +46,185 @@ export default function TutorProfileScreen() {
     }
   }
 
-  // Shared loading state
   if (loading) {
-    return <ScreenState message="Loading tutor..." />;
-  }
-
-  // Shared error state with retry
-  if (errorMessage) {
     return (
-      <ScreenState
-        title="Tutor Profile"
-        message={errorMessage}
-        buttonText="Retry"
-        onPress={loadTutor}
-      />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.stateWrap}>
+          <ScreenState message="Loading tutor..." />
+        </View>
+        <AppBottomTabs />
+      </SafeAreaView>
     );
   }
 
-  // Empty state if no tutor was found
+  if (errorMessage) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.stateWrap}>
+          <ScreenState
+            title="Tutor Profile"
+            message={errorMessage}
+            buttonText="Retry"
+            onPress={loadTutor}
+          />
+        </View>
+        <AppBottomTabs />
+      </SafeAreaView>
+    );
+  }
+
   if (!tutor) {
-    return <ScreenState message="Tutor not found." />;
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.stateWrap}>
+          <ScreenState message="Tutor not found." />
+        </View>
+        <AppBottomTabs />
+      </SafeAreaView>
+    );
   }
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      {/* Tutor name */}
-      <Text style={{ fontSize: 28, fontWeight: '700' }}>{tutor.name}</Text>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.card}>
+          <Image
+            source={{
+              uri:
+                tutor.avatar_url ??
+                `https://api.dicebear.com/7.x/initials/png?seed=${encodeURIComponent(
+                  tutor.name,
+                )}`,
+            }}
+            style={styles.avatar}
+          />
 
-      {/* Tutor subject */}
-      <Text style={{ marginTop: 8, fontSize: 18 }}>{tutor.subject}</Text>
+          <Text style={styles.name}>{tutor.name}</Text>
+          <Text style={styles.subject}>{tutor.subject}</Text>
 
-      {/* Tutor price */}
-      <Text style={{ marginTop: 8 }}>${tutor.price}/hour</Text>
+          <View style={styles.metaGrid}>
+            <View style={styles.metaItem}>
+              <Text style={styles.metaValue}>${tutor.price}</Text>
+              <Text style={styles.metaLabel}>per hour</Text>
+            </View>
 
-      {/* Tutor rating */}
-      <Text style={{ marginTop: 8 }}>⭐ {tutor.rating}</Text>
+            <View style={styles.metaItem}>
+              <Text style={styles.metaValue}>{tutor.rating}</Text>
+              <Text style={styles.metaLabel}>rating</Text>
+            </View>
+          </View>
 
-      {/* Tutor bio */}
-      <Text style={{ marginTop: 16 }}>{tutor.bio}</Text>
+          <View style={styles.bioBlock}>
+            <Text style={styles.sectionLabel}>About</Text>
+            <Text style={styles.bioText}>{tutor.bio ?? 'No bio available.'}</Text>
+          </View>
 
-      {/* Navigate to booking flow */}
-      <Pressable
-        onPress={() => router.push(`/booking/${tutor.id}` as any)}
-        style={{
-          marginTop: 24,
-          backgroundColor: 'black',
-          padding: 14,
-          borderRadius: 10,
-        }}
-      >
-        <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
-          Book Session
-        </Text>
-      </Pressable>
-    </View>
+          <Pressable
+            onPress={() => router.push(`/booking/${tutor.id}` as any)}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              pressed ? styles.primaryButtonPressed : null,
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>Book Session</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+      <AppBottomTabs />
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
+  stateWrap: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    padding: layout.screenPadding,
+  },
+  card: {
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    padding: AppTheme.spacing.xxl,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    borderRadius: AppTheme.radius.xl,
+    backgroundColor: AppTheme.colors.surface,
+    ...AppTheme.shadows.card,
+  },
+  avatar: {
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    backgroundColor: AppTheme.colors.surfaceMuted,
+    marginBottom: AppTheme.spacing.lg,
+  },
+  name: {
+    fontSize: AppTheme.typography.screenTitle,
+    fontWeight: '800',
+    color: AppTheme.colors.text,
+  },
+  subject: {
+    marginTop: AppTheme.spacing.xs,
+    fontSize: AppTheme.typography.body,
+    color: AppTheme.colors.muted,
+  },
+  metaGrid: {
+    flexDirection: 'row',
+    gap: AppTheme.spacing.md,
+    marginTop: AppTheme.spacing.xxl,
+  },
+  metaItem: {
+    flex: 1,
+    padding: AppTheme.spacing.lg,
+    borderRadius: AppTheme.radius.lg,
+    backgroundColor: AppTheme.colors.surfaceWarm,
+    borderWidth: 1,
+    borderColor: '#fed7aa',
+  },
+  metaValue: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: AppTheme.colors.text,
+  },
+  metaLabel: {
+    marginTop: AppTheme.spacing.xs,
+    color: AppTheme.colors.amber,
+    fontWeight: '700',
+  },
+  bioBlock: {
+    marginTop: AppTheme.spacing.xxl,
+  },
+  sectionLabel: {
+    color: AppTheme.colors.text,
+    fontWeight: '800',
+    marginBottom: AppTheme.spacing.sm,
+  },
+  bioText: {
+    color: AppTheme.colors.muted,
+    lineHeight: 22,
+  },
+  primaryButton: {
+    marginTop: AppTheme.spacing.xxl,
+    backgroundColor: AppTheme.colors.primary,
+    minHeight: 48,
+    justifyContent: 'center',
+    borderRadius: AppTheme.radius.md,
+    paddingHorizontal: AppTheme.spacing.lg,
+  },
+  primaryButtonPressed: {
+    backgroundColor: AppTheme.colors.primaryPressed,
+    transform: [{ scale: 0.99 }],
+  },
+  primaryButtonText: {
+    color: AppTheme.colors.white,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+});

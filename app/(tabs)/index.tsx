@@ -5,134 +5,76 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  SafeAreaView,
+  StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
+import { AppTheme, layout } from '@/constants/theme';
+
 import { ScreenState } from '../../src/components/ScreenState';
 import { TutorCard } from '../../src/components/TutorCard';
-
 import { getTutors } from '../../src/services/tutors';
-
 import { Tutor } from '../../src/types/tutor';
 
 export default function HomeScreen() {
-  // Tutor rows loaded from Supabase.
-  const [tutors, setTutors] =
-    useState<Tutor[]>([]);
+  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const [minRating, setMinRating] = useState<number | null>(null);
 
-  // Initial loading spinner state.
-  const [loading, setLoading] =
-    useState(true);
-
-  // Pull-to-refresh loading state.
-  const [refreshing, setRefreshing] =
-    useState(false);
-
-  // User-friendly error message.
-  const [errorMessage, setErrorMessage] =
-    useState('');
-
-  // Search/filter state.
-  const [searchQuery, setSearchQuery] =
-    useState('');
-
-  const [maxPrice, setMaxPrice] =
-    useState<number | null>(null);
-
-  const [minRating, setMinRating] =
-    useState<number | null>(null);
-
-  // Load tutors when Home screen first mounts.
   useEffect(() => {
     loadTutors();
   }, []);
 
-  // Fetch tutors from Supabase.
   async function loadTutors() {
     try {
-      // Clear old errors before retrying.
       setErrorMessage('');
 
-      // Load tutors from the service layer.
       const data = await getTutors();
 
       setTutors(data ?? []);
     } catch (error) {
-      console.log(
-        'LOAD TUTORS ERROR:',
-        error,
-      );
-
-      setErrorMessage(
-        'Could not load tutors. Please try again.',
-      );
+      console.log('LOAD TUTORS ERROR:', error);
+      setErrorMessage('Could not load tutors. Please try again.');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
   }
 
-  // Pull-to-refresh action.
-  const handleRefresh =
-    useCallback(async () => {
-      setRefreshing(true);
+  const handleRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await loadTutors();
+  }, []);
 
-      await loadTutors();
-    }, []);
+  const filteredTutors = tutors.filter((tutor) => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch =
+      tutor.name.toLowerCase().includes(query) ||
+      tutor.subject.toLowerCase().includes(query);
+    const matchesPrice = maxPrice === null || tutor.price <= maxPrice;
+    const matchesRating =
+      minRating === null || Number(tutor.rating) >= minRating;
 
-  // Apply:
-  // - search filtering
-  // - price filtering
-  // - rating filtering
-  const filteredTutors =
-    tutors.filter((tutor) => {
-      const query =
-        searchQuery.toLowerCase();
+    return matchesSearch && matchesPrice && matchesRating;
+  });
 
-      // Match tutor name OR subject.
-      const matchesSearch =
-        tutor.name
-          .toLowerCase()
-          .includes(query) ||
-        tutor.subject
-          .toLowerCase()
-          .includes(query);
-
-      // Only include tutors under selected max price.
-      const matchesPrice =
-        maxPrice === null ||
-        tutor.price <= maxPrice;
-
-      // Only include tutors above selected rating.
-      const matchesRating =
-        minRating === null ||
-        Number(tutor.rating) >=
-          minRating;
-
-      return (
-        matchesSearch &&
-        matchesPrice &&
-        matchesRating
-      );
-    });
-
-  // Reset all filters back to defaults.
   function clearFilters() {
     setSearchQuery('');
     setMaxPrice(null);
     setMinRating(null);
   }
 
-  // Shared loading UI.
   if (loading) {
-    return (
-      <ScreenState message="Loading tutors..." />
-    );
+    return <ScreenState message="Loading tutors..." />;
   }
 
-  // Shared error UI.
   if (errorMessage) {
     return (
       <ScreenState
@@ -145,205 +87,183 @@ export default function HomeScreen() {
   }
 
   return (
-    <View
-      style={{
-        flex: 1,
-        padding: 20,
-      }}
-    >
-      {/* Page title */}
-      <Text
-        style={{
-          fontSize: 28,
-          fontWeight: '700',
-          marginBottom: 16,
-        }}
-      >
-        Find a Tutor
-      </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Find a Tutor</Text>
 
-      {/* Search input */}
-      <TextInput
-        placeholder="Search by name or subject..."
-        value={searchQuery}
-        onChangeText={setSearchQuery}
-        style={{
-          borderWidth: 1,
-          borderColor: '#ddd',
-          borderRadius: 10,
-          padding: 12,
-          marginBottom: 12,
-        }}
-      />
-
-      {/* Price filter section */}
-      <Text
-        style={{
-          fontWeight: '600',
-          marginBottom: 8,
-        }}
-      >
-        Price
-      </Text>
-
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: 8,
-          marginBottom: 16,
-        }}
-      >
-        {[null, 30, 40, 50].map(
-          (price) => (
-            <Pressable
-              key={price ?? 'all'}
-              onPress={() =>
-                setMaxPrice(price)
-              }
-              style={{
-                paddingVertical: 10,
-                paddingHorizontal: 14,
-                borderRadius: 999,
-                borderWidth: 1,
-
-                borderColor:
-                  maxPrice === price
-                    ? 'black'
-                    : '#ddd',
-
-                backgroundColor:
-                  maxPrice === price
-                    ? 'black'
-                    : 'white',
-              }}
-            >
-              <Text
-                style={{
-                  color:
-                    maxPrice === price
-                      ? 'white'
-                      : 'black',
-                }}
-              >
-                {price === null
-                  ? 'All'
-                  : `Under $${price}`}
-              </Text>
-            </Pressable>
-          ),
-        )}
-      </View>
-
-      {/* Rating filter section */}
-      <Text
-        style={{
-          fontWeight: '600',
-          marginBottom: 8,
-        }}
-      >
-        Rating
-      </Text>
-
-      <View
-        style={{
-          flexDirection: 'row',
-          gap: 8,
-          marginBottom: 16,
-        }}
-      >
-        {[null, 4.5, 4.8].map(
-          (rating) => (
-            <Pressable
-              key={rating ?? 'all'}
-              onPress={() =>
-                setMinRating(rating)
-              }
-              style={{
-                paddingVertical: 10,
-                paddingHorizontal: 14,
-                borderRadius: 999,
-                borderWidth: 1,
-
-                borderColor:
-                  minRating === rating
-                    ? 'black'
-                    : '#ddd',
-
-                backgroundColor:
-                  minRating === rating
-                    ? 'black'
-                    : 'white',
-              }}
-            >
-              <Text
-                style={{
-                  color:
-                    minRating === rating
-                      ? 'white'
-                      : 'black',
-                }}
-              >
-                {rating === null
-                  ? 'All'
-                  : `${rating}+ stars`}
-              </Text>
-            </Pressable>
-          ),
-        )}
-      </View>
-
-      {/* Reset filters */}
-      <Pressable
-        onPress={clearFilters}
-        style={{
-          marginBottom: 16,
-        }}
-      >
-        <Text
-          style={{
-            fontWeight: '600',
-          }}
-        >
-          Clear filters
-        </Text>
-      </Pressable>
-
-      {/* Tutor results */}
-      {filteredTutors.length === 0 ? (
-        <ScreenState message="No tutors found." />
-      ) : (
-        <FlatList
-          data={filteredTutors}
-          keyExtractor={(item) =>
-            item.id
-          }
-
-          // Pull-to-refresh support.
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-            />
-          }
-
-          renderItem={({ item }) => (
-            <TutorCard
-              name={item.name}
-              subject={item.subject}
-              price={item.price}
-              rating={item.rating}
-              avatarUrl={item.avatar_url}
-
-              // Navigate to tutor profile screen.
-              onPress={() =>
-                router.push(
-                  `/tutor/${item.id}` as any,
-                )
-              }
-            />
-          )}
+        <TextInput
+          placeholder="Search by name or subject"
+          placeholderTextColor={AppTheme.colors.subtle}
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          style={styles.searchInput}
         />
-      )}
-    </View>
+
+        <View style={styles.filterBlock}>
+          <Text style={styles.filterLabel}>Price</Text>
+
+          <View style={styles.chipRow}>
+            {[null, 30, 40, 50].map((price) => {
+              const selected = maxPrice === price;
+
+              return (
+                <Pressable
+                  key={price ?? 'all'}
+                  onPress={() => setMaxPrice(price)}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    selected ? styles.chipSelected : null,
+                    pressed ? styles.chipPressed : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selected ? styles.chipTextSelected : null,
+                    ]}
+                  >
+                    {price === null ? 'All' : `Under $${price}`}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <View style={styles.filterBlock}>
+          <Text style={styles.filterLabel}>Rating</Text>
+
+          <View style={styles.chipRow}>
+            {[null, 4.5, 4.8].map((rating) => {
+              const selected = minRating === rating;
+
+              return (
+                <Pressable
+                  key={rating ?? 'all'}
+                  onPress={() => setMinRating(rating)}
+                  style={({ pressed }) => [
+                    styles.chip,
+                    selected ? styles.chipSelected : null,
+                    pressed ? styles.chipPressed : null,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.chipText,
+                      selected ? styles.chipTextSelected : null,
+                    ]}
+                  >
+                    {rating === null ? 'All' : `${rating}+ stars`}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+
+        <Pressable onPress={clearFilters} style={styles.clearButton}>
+          <Text style={styles.clearButtonText}>Clear filters</Text>
+        </Pressable>
+
+        {filteredTutors.length === 0 ? (
+          <ScreenState message="No tutors found." />
+        ) : (
+          <FlatList
+            data={filteredTutors}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} />
+            }
+            renderItem={({ item }) => (
+              <TutorCard
+                name={item.name}
+                subject={item.subject}
+                price={item.price}
+                rating={item.rating}
+                avatarUrl={item.avatar_url}
+                onPress={() => router.push(`/tutor/${item.id}` as any)}
+              />
+            )}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
+  container: {
+    flex: 1,
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
+    padding: layout.screenPadding,
+  },
+  title: {
+    fontSize: AppTheme.typography.screenTitle,
+    fontWeight: '800',
+    color: AppTheme.colors.text,
+    marginBottom: AppTheme.spacing.lg,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    backgroundColor: AppTheme.colors.surface,
+    minHeight: 48,
+    borderRadius: AppTheme.radius.md,
+    paddingHorizontal: AppTheme.spacing.md,
+    marginBottom: AppTheme.spacing.lg,
+    color: AppTheme.colors.text,
+  },
+  filterBlock: {
+    marginBottom: AppTheme.spacing.lg,
+  },
+  filterLabel: {
+    color: AppTheme.colors.text,
+    fontWeight: '800',
+    marginBottom: AppTheme.spacing.sm,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: AppTheme.spacing.sm,
+  },
+  chip: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: AppTheme.radius.pill,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    backgroundColor: AppTheme.colors.surface,
+  },
+  chipSelected: {
+    borderColor: AppTheme.colors.primary,
+    backgroundColor: AppTheme.colors.primary,
+  },
+  chipPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  chipText: {
+    color: AppTheme.colors.text,
+    fontWeight: '700',
+  },
+  chipTextSelected: {
+    color: AppTheme.colors.white,
+  },
+  clearButton: {
+    alignSelf: 'flex-start',
+    marginBottom: AppTheme.spacing.lg,
+  },
+  clearButtonText: {
+    color: AppTheme.colors.primary,
+    fontWeight: '800',
+  },
+  listContent: {
+    paddingBottom: AppTheme.spacing.xxl,
+  },
+});

@@ -3,53 +3,41 @@ import { useEffect, useState } from 'react';
 
 import {
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
   Pressable,
+  SafeAreaView,
+  StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 
+import { AppTheme, layout } from '@/constants/theme';
+
+import { AppBottomTabs } from '../../src/components/AppBottomTabs';
 import { ScreenState } from '../../src/components/ScreenState';
 import { useBookings } from '../../src/context/BookingContext';
 import { useChat } from '../../src/context/ChatContext';
 
 export default function ChatScreen() {
-  // Read tutor id from dynamic route: /chat/[id]
   const { id } = useLocalSearchParams();
-
-  // Expo Router params can be string or string[], so normalize it
   const tutorId = Array.isArray(id) ? id[0] : id;
-
-  // Booking data is used to find the tutor name for this conversation
   const { bookings } = useBookings();
-
-  // ChatContext handles Supabase messages, realtime updates, and unread state
   const {
     messagesByConversation,
     loadMessages,
     addMessage,
     markConversationRead,
   } = useChat();
-
-  // Controlled input state
   const [messageText, setMessageText] = useState('');
-
-  // Prevents duplicate message sends
   const [sending, setSending] = useState(false);
-
-  // User-friendly error message
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Find the booking connected to this tutor
   const booking = bookings.find((booking) => booking.tutorId === tutorId);
-
-  // Fallback name if booking data has not loaded yet
   const tutorName = booking?.tutorName ?? 'Tutor';
-
-  // Messages for this specific tutor conversation
   const messages = tutorId ? messagesByConversation[tutorId] ?? [] : [];
 
-  // Load messages when the chat opens
   useEffect(() => {
     fetchMessages();
   }, [tutorId]);
@@ -59,11 +47,7 @@ export default function ChatScreen() {
 
     try {
       setErrorMessage('');
-
-      // Load saved messages from Supabase
       await loadMessages(tutorId);
-
-      // Mark this conversation as read so the unread badge clears
       await markConversationRead(tutorId);
     } catch (error) {
       console.log('LOAD CHAT ERROR:', error);
@@ -78,10 +62,7 @@ export default function ChatScreen() {
     setErrorMessage('');
 
     try {
-      // Save message to Supabase
       await addMessage(tutorId, tutorName, messageText.trim());
-
-      // Clear input after successful send
       setMessageText('');
     } catch (error) {
       console.log('SEND MESSAGE ERROR:', error);
@@ -95,102 +76,219 @@ export default function ChatScreen() {
 
   if (errorMessage) {
     return (
-      <ScreenState
-        title={tutorName}
-        message={errorMessage}
-        buttonText="Retry"
-        onPress={fetchMessages}
-      />
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.stateWrap}>
+          <ScreenState
+            title={tutorName}
+            message={errorMessage}
+            buttonText="Retry"
+            onPress={fetchMessages}
+          />
+        </View>
+        <AppBottomTabs />
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      {/* Chat header */}
-      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 4 }}>
-        {tutorName}
-      </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
+      >
+        <View style={styles.container}>
+          <View style={styles.header}>
+            <Text numberOfLines={1} style={styles.title}>
+              {tutorName}
+            </Text>
+            <Text style={styles.subtitle}>Tutor conversation</Text>
+          </View>
 
-      <Text style={{ marginBottom: 16, color: '#666' }}>
-        Tutor conversation
-      </Text>
+          {messages.length === 0 ? (
+            <View style={styles.emptyWrap}>
+              <ScreenState message="No messages yet. Start the conversation." />
+            </View>
+          ) : (
+            <FlatList
+              data={messages}
+              keyExtractor={(item) => item.id}
+              contentContainerStyle={styles.messageList}
+              renderItem={({ item }) => {
+                const isStudent = item.sender === 'student';
 
-      {/* Empty state */}
-      {messages.length === 0 ? (
-        <View style={{ flex: 1 }}>
-          <ScreenState message="No messages yet. Start the conversation." />
+                return (
+                  <View
+                    style={[
+                      styles.messageBubble,
+                      isStudent ? styles.studentBubble : styles.tutorBubble,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.messageText,
+                        isStudent ? styles.studentMessageText : styles.tutorMessageText,
+                      ]}
+                    >
+                      {item.text}
+                    </Text>
+
+                    <Text
+                      style={[
+                        styles.messageTime,
+                        isStudent ? styles.studentMessageTime : styles.tutorMessageTime,
+                      ]}
+                    >
+                      {item.time}
+                    </Text>
+                  </View>
+                );
+              }}
+            />
+          )}
+
+          <View style={styles.inputRow}>
+            <TextInput
+              placeholder="Type a message"
+              placeholderTextColor={AppTheme.colors.subtle}
+              value={messageText}
+              onChangeText={setMessageText}
+              onSubmitEditing={sendMessage}
+              returnKeyType="send"
+              editable={!sending}
+              style={styles.input}
+            />
+
+            <Pressable
+              disabled={sendDisabled}
+              onPress={sendMessage}
+              style={({ pressed }) => [
+                styles.sendButton,
+                sendDisabled ? styles.sendButtonDisabled : null,
+                pressed && !sendDisabled ? styles.sendButtonPressed : null,
+              ]}
+            >
+              <Text style={styles.sendButtonText}>
+                {sending ? 'Sending...' : 'Send'}
+              </Text>
+            </Pressable>
+          </View>
         </View>
-      ) : (
-        <FlatList
-          data={messages}
-          keyExtractor={(item) => item.id}
-          contentContainerStyle={{ paddingBottom: 20 }}
-          renderItem={({ item }) => {
-            const isStudent = item.sender === 'student';
-
-            return (
-              <View
-                style={{
-                  alignSelf: isStudent ? 'flex-end' : 'flex-start',
-                  backgroundColor: isStudent ? '#111' : '#eee',
-                  padding: 12,
-                  borderRadius: 12,
-                  marginBottom: 10,
-                  maxWidth: '80%',
-                }}
-              >
-                <Text style={{ color: isStudent ? 'white' : 'black' }}>
-                  {item.text}
-                </Text>
-
-                <Text
-                  style={{
-                    marginTop: 4,
-                    fontSize: 12,
-                    color: isStudent ? '#ddd' : '#666',
-                  }}
-                >
-                  {item.time}
-                </Text>
-              </View>
-            );
-          }}
-        />
-      )}
-
-      {/* Message input row */}
-      <View style={{ flexDirection: 'row', gap: 8, marginTop: 12 }}>
-        <TextInput
-          placeholder="Type a message..."
-          value={messageText}
-          onChangeText={setMessageText}
-          onSubmitEditing={sendMessage}
-          returnKeyType="send"
-          editable={!sending}
-          style={{
-            flex: 1,
-            borderWidth: 1,
-            borderColor: '#ddd',
-            borderRadius: 10,
-            padding: 12,
-          }}
-        />
-
-        <Pressable
-          disabled={sendDisabled}
-          onPress={sendMessage}
-          style={{
-            backgroundColor: sendDisabled ? '#ccc' : 'black',
-            padding: 12,
-            borderRadius: 10,
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={{ color: 'white', fontWeight: '600' }}>
-            {sending ? 'Sending...' : 'Send'}
-          </Text>
-        </Pressable>
-      </View>
-    </View>
+      </KeyboardAvoidingView>
+      <AppBottomTabs />
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  stateWrap: {
+    flex: 1,
+  },
+  container: {
+    flex: 1,
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
+    padding: layout.screenPadding,
+  },
+  header: {
+    marginBottom: AppTheme.spacing.lg,
+  },
+  title: {
+    fontSize: AppTheme.typography.screenTitle,
+    fontWeight: '800',
+    color: AppTheme.colors.text,
+  },
+  subtitle: {
+    marginTop: AppTheme.spacing.xs,
+    color: AppTheme.colors.muted,
+    fontWeight: '700',
+  },
+  emptyWrap: {
+    flex: 1,
+  },
+  messageList: {
+    paddingBottom: AppTheme.spacing.xl,
+  },
+  messageBubble: {
+    padding: AppTheme.spacing.md,
+    borderRadius: AppTheme.radius.lg,
+    marginBottom: AppTheme.spacing.sm,
+    maxWidth: '82%',
+  },
+  studentBubble: {
+    alignSelf: 'flex-end',
+    backgroundColor: AppTheme.colors.primary,
+    borderBottomRightRadius: AppTheme.radius.sm,
+  },
+  tutorBubble: {
+    alignSelf: 'flex-start',
+    backgroundColor: AppTheme.colors.surface,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    borderBottomLeftRadius: AppTheme.radius.sm,
+  },
+  messageText: {
+    lineHeight: 20,
+  },
+  studentMessageText: {
+    color: AppTheme.colors.white,
+  },
+  tutorMessageText: {
+    color: AppTheme.colors.text,
+  },
+  messageTime: {
+    marginTop: AppTheme.spacing.xs,
+    fontSize: AppTheme.typography.caption,
+    fontWeight: '700',
+  },
+  studentMessageTime: {
+    color: '#dbeafe',
+  },
+  tutorMessageTime: {
+    color: AppTheme.colors.subtle,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: AppTheme.spacing.sm,
+    paddingTop: AppTheme.spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: AppTheme.colors.border,
+  },
+  input: {
+    flex: 1,
+    minHeight: 48,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    borderRadius: AppTheme.radius.md,
+    backgroundColor: AppTheme.colors.surface,
+    paddingHorizontal: AppTheme.spacing.md,
+    color: AppTheme.colors.text,
+  },
+  sendButton: {
+    minWidth: 86,
+    minHeight: 48,
+    justifyContent: 'center',
+    borderRadius: AppTheme.radius.md,
+    backgroundColor: AppTheme.colors.primary,
+    paddingHorizontal: AppTheme.spacing.md,
+  },
+  sendButtonDisabled: {
+    backgroundColor: AppTheme.colors.disabled,
+  },
+  sendButtonPressed: {
+    backgroundColor: AppTheme.colors.primaryPressed,
+    transform: [{ scale: 0.98 }],
+  },
+  sendButtonText: {
+    color: AppTheme.colors.white,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+});

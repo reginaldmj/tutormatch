@@ -1,20 +1,28 @@
 import { router } from 'expo-router';
 import { useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+
+import { AppTheme, layout } from '@/constants/theme';
 
 import { supabase } from '../../src/lib/supabase';
 
 export default function SignupScreen() {
-  // Controlled signup form fields
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  // Prevents duplicate signup submissions
   const [loading, setLoading] = useState(false);
 
   async function handleSignup() {
-    // Basic validation before creating account
     if (!fullName.trim() || !email.trim() || !password) {
       Alert.alert('Missing fields', 'Enter name, email, and password.');
       return;
@@ -28,7 +36,6 @@ export default function SignupScreen() {
     setLoading(true);
 
     try {
-      // Create Supabase Auth user
       const { data, error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
@@ -41,14 +48,12 @@ export default function SignupScreen() {
 
       const userId = data.user?.id;
 
-      // If email confirmation is enabled, user may need to verify first
       if (!userId) {
         Alert.alert('Account created', 'Check your email, then log in.');
         router.push('/auth/login' as any);
         return;
       }
 
-      // Create matching app profile row
       const { error: profileError } = await supabase.from('profiles').insert({
         id: userId,
         full_name: fullName.trim(),
@@ -70,73 +75,143 @@ export default function SignupScreen() {
   const disabled = loading || !fullName.trim() || !email.trim() || !password;
 
   return (
-    <View style={{ flex: 1, padding: 20, justifyContent: 'center' }}>
-      <Text style={{ fontSize: 32, fontWeight: '700', marginBottom: 24 }}>
-        Sign Up
-      </Text>
-
-      <TextInput
-        placeholder="Full name"
-        value={fullName}
-        onChangeText={setFullName}
-        autoCapitalize="words"
-        style={{
-          borderWidth: 1,
-          borderColor: '#ddd',
-          padding: 12,
-          borderRadius: 10,
-          marginBottom: 12,
-        }}
-      />
-
-      <TextInput
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-        style={{
-          borderWidth: 1,
-          borderColor: '#ddd',
-          padding: 12,
-          borderRadius: 10,
-          marginBottom: 12,
-        }}
-      />
-
-      <TextInput
-        placeholder="Password"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-        style={{
-          borderWidth: 1,
-          borderColor: '#ddd',
-          padding: 12,
-          borderRadius: 10,
-          marginBottom: 16,
-        }}
-      />
-
-      <Pressable
-        disabled={disabled}
-        onPress={handleSignup}
-        style={{
-          backgroundColor: disabled ? '#ccc' : 'black',
-          padding: 14,
-          borderRadius: 10,
-        }}
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      style={styles.keyboardView}
+    >
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
-          {loading ? 'Creating account...' : 'Create Account'}
-        </Text>
-      </Pressable>
+        <View style={styles.card}>
+          <Text style={styles.brand}>TutorMatch</Text>
+          <Text style={styles.title}>Create account</Text>
 
-      <Pressable onPress={() => router.push('/auth/login' as any)}>
-        <Text style={{ marginTop: 16, textAlign: 'center' }}>
-          Already have an account? Login
-        </Text>
-      </Pressable>
-    </View>
+          <Text style={styles.label}>Full name</Text>
+          <TextInput
+            placeholder="Full name"
+            placeholderTextColor={AppTheme.colors.subtle}
+            value={fullName}
+            onChangeText={setFullName}
+            autoCapitalize="words"
+            style={styles.input}
+          />
+
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            placeholder="you@example.com"
+            placeholderTextColor={AppTheme.colors.subtle}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+          />
+
+          <Text style={styles.label}>Password</Text>
+          <TextInput
+            placeholder="Password"
+            placeholderTextColor={AppTheme.colors.subtle}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+          />
+
+          <Pressable
+            disabled={disabled}
+            onPress={handleSignup}
+            style={({ pressed }) => [
+              styles.primaryButton,
+              disabled ? styles.primaryButtonDisabled : null,
+              pressed && !disabled ? styles.primaryButtonPressed : null,
+            ]}
+          >
+            <Text style={styles.primaryButtonText}>
+              {loading ? 'Creating account...' : 'Create Account'}
+            </Text>
+          </Pressable>
+
+          <Pressable onPress={() => router.push('/auth/login' as any)}>
+            <Text style={styles.linkText}>Already have an account? Login</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
+
+const styles = StyleSheet.create({
+  keyboardView: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: layout.screenPadding,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 440,
+    padding: AppTheme.spacing.xxl,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    borderRadius: AppTheme.radius.xl,
+    backgroundColor: AppTheme.colors.surface,
+    ...AppTheme.shadows.card,
+  },
+  brand: {
+    color: AppTheme.colors.primary,
+    fontWeight: '800',
+    marginBottom: AppTheme.spacing.sm,
+  },
+  title: {
+    fontSize: AppTheme.typography.authTitle,
+    fontWeight: '800',
+    color: AppTheme.colors.text,
+    marginBottom: AppTheme.spacing.xxl,
+  },
+  label: {
+    color: AppTheme.colors.text,
+    fontWeight: '700',
+    marginBottom: AppTheme.spacing.sm,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    backgroundColor: AppTheme.colors.surface,
+    paddingHorizontal: AppTheme.spacing.md,
+    minHeight: 48,
+    borderRadius: AppTheme.radius.md,
+    marginBottom: AppTheme.spacing.lg,
+    color: AppTheme.colors.text,
+  },
+  primaryButton: {
+    backgroundColor: AppTheme.colors.primary,
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: AppTheme.spacing.lg,
+    borderRadius: AppTheme.radius.md,
+    marginTop: AppTheme.spacing.sm,
+  },
+  primaryButtonDisabled: {
+    backgroundColor: AppTheme.colors.disabled,
+  },
+  primaryButtonPressed: {
+    backgroundColor: AppTheme.colors.primaryPressed,
+    transform: [{ scale: 0.99 }],
+  },
+  primaryButtonText: {
+    color: AppTheme.colors.white,
+    textAlign: 'center',
+    fontWeight: '700',
+  },
+  linkText: {
+    marginTop: AppTheme.spacing.lg,
+    textAlign: 'center',
+    color: AppTheme.colors.primary,
+    fontWeight: '700',
+  },
+});

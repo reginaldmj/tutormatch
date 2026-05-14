@@ -1,29 +1,36 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
+import { AppTheme, layout } from '@/constants/theme';
+
+import { AppBottomTabs } from '../../src/components/AppBottomTabs';
 import { ScreenState } from '../../src/components/ScreenState';
 import { supabase } from '../../src/lib/supabase';
 import { Profile } from '../../src/types/profile';
 
 export default function EditProfileScreen() {
-  // Form state for editable profile fields
   const [fullName, setFullName] = useState('');
   const [role, setRole] = useState<Profile['role']>('student');
-
-  // Tracks initial profile loading from Supabase
   const [loading, setLoading] = useState(true);
-
-  // Tracks save request state to prevent duplicate submissions
   const [saving, setSaving] = useState(false);
 
-  // Load current profile when screen opens
   useEffect(() => {
     loadProfile();
   }, []);
 
   async function loadProfile() {
-    // Get currently logged-in user
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -33,7 +40,6 @@ export default function EditProfileScreen() {
       return;
     }
 
-    // Fetch profile row linked to auth user id
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
@@ -46,7 +52,6 @@ export default function EditProfileScreen() {
       return;
     }
 
-    // Pre-fill form with current profile values
     if (data) {
       setFullName(data.full_name ?? '');
       setRole(data.role ?? 'student');
@@ -56,7 +61,6 @@ export default function EditProfileScreen() {
   }
 
   async function handleSave() {
-    // Validate required field
     if (!fullName.trim()) {
       Alert.alert('Missing name', 'Please enter your full name.');
       return;
@@ -64,7 +68,6 @@ export default function EditProfileScreen() {
 
     setSaving(true);
 
-    // Get current auth user before updating profile
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -74,7 +77,6 @@ export default function EditProfileScreen() {
       return;
     }
 
-    // Update profile row in Supabase
     const { error } = await supabase
       .from('profiles')
       .update({
@@ -90,81 +92,189 @@ export default function EditProfileScreen() {
       return;
     }
 
-    // Return to Profile tab after successful update
     Alert.alert('Profile updated', 'Your profile was saved.');
     router.back();
   }
 
-  // Disable save while saving or if name is empty
   const saveDisabled = saving || !fullName.trim();
 
   if (loading) {
-    return <ScreenState message="Loading profile..." />;
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.stateWrap}>
+          <ScreenState message="Loading profile..." />
+        </View>
+        <AppBottomTabs />
+      </SafeAreaView>
+    );
   }
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      {/* Page title */}
-      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
-        Edit Profile
-      </Text>
-
-      {/* Full name input */}
-      <Text style={{ fontWeight: '600', marginBottom: 8 }}>Full Name</Text>
-
-      <TextInput
-        value={fullName}
-        onChangeText={setFullName}
-        placeholder="Full name"
-        editable={!saving}
-        style={{
-          borderWidth: 1,
-          borderColor: '#ddd',
-          borderRadius: 10,
-          padding: 12,
-          marginBottom: 16,
-        }}
-      />
-
-      {/* Role selector */}
-      <Text style={{ fontWeight: '600', marginBottom: 8 }}>Role</Text>
-
-      <View style={{ flexDirection: 'row', gap: 8, marginBottom: 24 }}>
-        {(['student', 'tutor'] as Profile['role'][]).map((option) => (
-          <Pressable
-            key={option}
-            disabled={saving}
-            onPress={() => setRole(option)}
-            style={{
-              paddingVertical: 10,
-              paddingHorizontal: 14,
-              borderRadius: 999,
-              borderWidth: 1,
-              borderColor: role === option ? 'black' : '#ddd',
-              backgroundColor: role === option ? 'black' : 'white',
-            }}
-          >
-            <Text style={{ color: role === option ? 'white' : 'black' }}>
-              {option === 'student' ? 'Student' : 'Tutor'}
-            </Text>
-          </Pressable>
-        ))}
-      </View>
-
-      {/* Save button */}
-      <Pressable
-        disabled={saveDisabled}
-        onPress={handleSave}
-        style={{
-          backgroundColor: saveDisabled ? '#ccc' : 'black',
-          padding: 14,
-          borderRadius: 12,
-        }}
+    <SafeAreaView style={styles.safeArea}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        style={styles.keyboardView}
       >
-        <Text style={{ color: 'white', textAlign: 'center', fontWeight: '600' }}>
-          {saving ? 'Saving...' : 'Save Profile'}
-        </Text>
-      </Pressable>
-    </View>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          <View style={styles.card}>
+            <Text style={styles.title}>Edit Profile</Text>
+
+            <Text style={styles.label}>Full Name</Text>
+            <TextInput
+              value={fullName}
+              onChangeText={setFullName}
+              placeholder="Full name"
+              placeholderTextColor={AppTheme.colors.subtle}
+              editable={!saving}
+              style={styles.input}
+            />
+
+            <Text style={styles.label}>Role</Text>
+
+            <View style={styles.chipRow}>
+              {(['student', 'tutor'] as Profile['role'][]).map((option) => {
+                const selected = role === option;
+
+                return (
+                  <Pressable
+                    key={option}
+                    disabled={saving}
+                    onPress={() => setRole(option)}
+                    style={({ pressed }) => [
+                      styles.chip,
+                      selected ? styles.chipSelected : null,
+                      pressed && !saving ? styles.chipPressed : null,
+                    ]}
+                  >
+                    <Text
+                      style={[
+                        styles.chipText,
+                        selected ? styles.chipTextSelected : null,
+                      ]}
+                    >
+                      {option === 'student' ? 'Student' : 'Tutor'}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+
+            <Pressable
+              disabled={saveDisabled}
+              onPress={handleSave}
+              style={({ pressed }) => [
+                styles.primaryButton,
+                saveDisabled ? styles.primaryButtonDisabled : null,
+                pressed && !saveDisabled ? styles.primaryButtonPressed : null,
+              ]}
+            >
+              <Text style={styles.primaryButtonText}>
+                {saving ? 'Saving...' : 'Save Profile'}
+              </Text>
+            </Pressable>
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+      <AppBottomTabs />
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
+  keyboardView: {
+    flex: 1,
+  },
+  stateWrap: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    alignItems: 'center',
+    padding: layout.screenPadding,
+  },
+  card: {
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    padding: AppTheme.spacing.xxl,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    borderRadius: AppTheme.radius.xl,
+    backgroundColor: AppTheme.colors.surface,
+    ...AppTheme.shadows.card,
+  },
+  title: {
+    fontSize: AppTheme.typography.screenTitle,
+    fontWeight: '800',
+    color: AppTheme.colors.text,
+    marginBottom: AppTheme.spacing.xxl,
+  },
+  label: {
+    color: AppTheme.colors.text,
+    fontWeight: '800',
+    marginBottom: AppTheme.spacing.sm,
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    backgroundColor: AppTheme.colors.surface,
+    minHeight: 48,
+    borderRadius: AppTheme.radius.md,
+    paddingHorizontal: AppTheme.spacing.md,
+    marginBottom: AppTheme.spacing.lg,
+    color: AppTheme.colors.text,
+  },
+  chipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: AppTheme.spacing.sm,
+    marginBottom: AppTheme.spacing.xxl,
+  },
+  chip: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: AppTheme.radius.pill,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    backgroundColor: AppTheme.colors.surface,
+  },
+  chipSelected: {
+    borderColor: AppTheme.colors.primary,
+    backgroundColor: AppTheme.colors.primary,
+  },
+  chipPressed: {
+    transform: [{ scale: 0.98 }],
+  },
+  chipText: {
+    color: AppTheme.colors.text,
+    fontWeight: '800',
+  },
+  chipTextSelected: {
+    color: AppTheme.colors.white,
+  },
+  primaryButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+    borderRadius: AppTheme.radius.md,
+    backgroundColor: AppTheme.colors.primary,
+    paddingHorizontal: AppTheme.spacing.lg,
+  },
+  primaryButtonDisabled: {
+    backgroundColor: AppTheme.colors.disabled,
+  },
+  primaryButtonPressed: {
+    backgroundColor: AppTheme.colors.primaryPressed,
+    transform: [{ scale: 0.99 }],
+  },
+  primaryButtonText: {
+    color: AppTheme.colors.white,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+});

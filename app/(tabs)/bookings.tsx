@@ -4,25 +4,41 @@ import {
   FlatList,
   Pressable,
   RefreshControl,
+  SafeAreaView,
+  StyleSheet,
   Text,
   View,
 } from 'react-native';
 
+import { AppTheme, layout } from '@/constants/theme';
+
+import { Banner } from '../../src/components/Banner';
 import { ScreenState } from '../../src/components/ScreenState';
 import { useBookings } from '../../src/context/BookingContext';
+import { Booking } from '../../src/types/booking';
+
+const statusTones: Record<
+  Booking['status'],
+  { backgroundColor: string; color: string }
+> = {
+  confirmed: {
+    backgroundColor: AppTheme.colors.successSoft,
+    color: AppTheme.colors.success,
+  },
+  cancelled: {
+    backgroundColor: AppTheme.colors.dangerSoft,
+    color: AppTheme.colors.danger,
+  },
+  completed: {
+    backgroundColor: AppTheme.colors.primarySoft,
+    color: AppTheme.colors.primary,
+  },
+};
 
 export default function BookingsScreen() {
-  // BookingContext provides:
-  // - bookings loaded from Supabase
-  // - loading state
-  // - reload function
-  // - cancel booking action
   const { bookings, loading, loadBookings, cancelBooking } = useBookings();
-
-  // User-friendly error shown on this screen only
   const [errorMessage, setErrorMessage] = useState('');
 
-  // Pull-to-refresh reloads bookings from Supabase
   async function handleRefresh() {
     try {
       setErrorMessage('');
@@ -33,7 +49,6 @@ export default function BookingsScreen() {
     }
   }
 
-  // Cancels a booking by updating its status in Supabase
   async function handleCancelBooking(bookingId: string) {
     try {
       setErrorMessage('');
@@ -44,75 +59,155 @@ export default function BookingsScreen() {
     }
   }
 
-  // Shared loading UI while bookings are being fetched
   if (loading) {
     return <ScreenState message="Loading bookings..." />;
   }
 
   return (
-    <View style={{ flex: 1, padding: 20 }}>
-      {/* Page title */}
-      <Text style={{ fontSize: 28, fontWeight: '700', marginBottom: 16 }}>
-        My Bookings
-      </Text>
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <Text style={styles.title}>My Bookings</Text>
 
-      {/* Error message */}
-      {errorMessage ? (
-        <Text style={{ marginBottom: 16, color: 'red' }}>
-          {errorMessage}
-        </Text>
-      ) : null}
+        {errorMessage ? <Banner type="error" message={errorMessage} /> : null}
 
-      {/* Empty state */}
-      {bookings.length === 0 ? (
-        <ScreenState message="No bookings yet." />
-      ) : (
-        <FlatList
-          data={bookings}
-          keyExtractor={(item) => item.id}
-          refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
-          }
-          renderItem={({ item }) => (
-            <View
-              style={{
-                padding: 16,
-                borderWidth: 1,
-                borderColor: '#ddd',
-                borderRadius: 12,
-                marginBottom: 12,
-              }}
-            >
-              {/* Tutor name */}
-              <Text style={{ fontSize: 18, fontWeight: '600' }}>
-                {item.tutorName}
-              </Text>
+        {bookings.length === 0 ? (
+          <ScreenState message="No bookings yet." />
+        ) : (
+          <FlatList
+            data={bookings}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.listContent}
+            refreshControl={
+              <RefreshControl refreshing={loading} onRefresh={handleRefresh} />
+            }
+            renderItem={({ item }) => {
+              const tone = statusTones[item.status];
 
-              {/* Booking details */}
-              <Text style={{ marginTop: 4 }}>{item.subject}</Text>
-              <Text style={{ marginTop: 4 }}>{item.time}</Text>
-              <Text style={{ marginTop: 4 }}>Status: {item.status}</Text>
+              return (
+                <View style={styles.bookingCard}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.cardHeaderText}>
+                      <Text numberOfLines={1} style={styles.tutorName}>
+                        {item.tutorName}
+                      </Text>
+                      <Text numberOfLines={1} style={styles.subject}>
+                        {item.subject}
+                      </Text>
+                    </View>
 
-              {/* Cancel button only appears for active bookings */}
-              {item.status !== 'cancelled' && (
-                <Pressable
-                  onPress={() => handleCancelBooking(item.id)}
-                  style={{
-                    marginTop: 12,
-                    backgroundColor: '#eee',
-                    padding: 12,
-                    borderRadius: 10,
-                  }}
-                >
-                  <Text style={{ textAlign: 'center', fontWeight: '600' }}>
-                    Cancel Booking
-                  </Text>
-                </Pressable>
-              )}
-            </View>
-          )}
-        />
-      )}
-    </View>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: tone.backgroundColor },
+                      ]}
+                    >
+                      <Text style={[styles.statusText, { color: tone.color }]}>
+                        {item.status}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <Text style={styles.timeText}>{item.time}</Text>
+
+                  {item.status !== 'cancelled' ? (
+                    <Pressable
+                      onPress={() => handleCancelBooking(item.id)}
+                      style={({ pressed }) => [
+                        styles.cancelButton,
+                        pressed ? styles.cancelButtonPressed : null,
+                      ]}
+                    >
+                      <Text style={styles.cancelButtonText}>Cancel Booking</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              );
+            }}
+          />
+        )}
+      </View>
+    </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: AppTheme.colors.background,
+  },
+  container: {
+    flex: 1,
+    width: '100%',
+    maxWidth: layout.maxContentWidth,
+    alignSelf: 'center',
+    padding: layout.screenPadding,
+  },
+  title: {
+    fontSize: AppTheme.typography.screenTitle,
+    fontWeight: '800',
+    color: AppTheme.colors.text,
+    marginBottom: AppTheme.spacing.lg,
+  },
+  listContent: {
+    paddingBottom: AppTheme.spacing.xxl,
+  },
+  bookingCard: {
+    padding: AppTheme.spacing.lg,
+    borderWidth: 1,
+    borderColor: AppTheme.colors.border,
+    borderRadius: AppTheme.radius.lg,
+    backgroundColor: AppTheme.colors.surface,
+    marginBottom: AppTheme.spacing.md,
+    ...AppTheme.shadows.soft,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: AppTheme.spacing.md,
+  },
+  cardHeaderText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  tutorName: {
+    fontSize: AppTheme.typography.cardTitle,
+    fontWeight: '800',
+    color: AppTheme.colors.text,
+  },
+  subject: {
+    marginTop: AppTheme.spacing.xs,
+    color: AppTheme.colors.muted,
+  },
+  statusBadge: {
+    borderRadius: AppTheme.radius.pill,
+    paddingVertical: 6,
+    paddingHorizontal: AppTheme.spacing.md,
+  },
+  statusText: {
+    fontSize: AppTheme.typography.caption,
+    fontWeight: '800',
+    textTransform: 'capitalize',
+  },
+  timeText: {
+    marginTop: AppTheme.spacing.lg,
+    color: AppTheme.colors.text,
+    fontWeight: '700',
+  },
+  cancelButton: {
+    marginTop: AppTheme.spacing.lg,
+    minHeight: 44,
+    justifyContent: 'center',
+    borderRadius: AppTheme.radius.md,
+    backgroundColor: AppTheme.colors.dangerSoft,
+    paddingHorizontal: AppTheme.spacing.lg,
+  },
+  cancelButtonPressed: {
+    transform: [{ scale: 0.99 }],
+  },
+  cancelButtonText: {
+    color: AppTheme.colors.danger,
+    textAlign: 'center',
+    fontWeight: '800',
+  },
+});
